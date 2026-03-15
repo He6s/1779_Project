@@ -21,3 +21,24 @@ A cloud native expense splitting platform for small groups.
 - api
 - db
 - redis
+
+## What has been done
+- Added the root Docker Compose setup
+- Added the backend service skeleton
+- Added the frontend service skeleton
+- Added PostgreSQL and Redis services
+- Added the initial database schema
+- Added environment variable template files
+- Verified all services run locally
+- Verified PostgreSQL data persists after restart
+
+## TODO
+- Add authentication and user management
+- Add group creation and member management
+- Add expense creation and split logic
+- Add settlement and balance calculation
+- Connect frontend to backend APIs
+- Add Kubernetes deployment files
+- Add monitoring and required advanced features
+- Test the full system end to end
+- Prepare presentation and report
