@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: settleup-app-config
+  namespace: settleup
+data:
+  # Updated by scripts/deploy_doks.ps1 after LoadBalancer endpoint is ready.
+  APP_BASE_URL: http://web.example.com
+  API_BASE_URL: http://api.example.com:3001
+  CORS_ORIGIN: "*"

@@ -1,4 +1,4 @@
-FROM node:22
+FROM node:22 AS build
 
 WORKDIR /app
 
@@ -6,6 +6,18 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+RUN npm run build
+
+FROM node:22 AS runtime
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=build /app/dist ./dist
+COPY server.js ./server.js
 
 EXPOSE 3000
 

@@ -21,6 +21,18 @@ services:
     depends_on:
       - api
 
+  worker:
+    build: ./api
+    command: ["node", "src/worker.js"]
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_started
+
   db:
     image: postgres:17
     ports:

@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SettleUp Demo Console</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap');
+
+      :root {
+        --bg: #f2eee6;
+        --paper: #fffef9;
+        --ink: #1e1f18;
+        --muted: #5f6457;
+        --line: #d8d0c0;
+        --accent: #1f6f56;
+        --accent-soft: #d9eee5;
+        --danger: #8e2a2a;
+        --shadow: 0 10px 30px rgba(37, 43, 34, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Space Grotesk', sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 10%, #f7f2e8 0%, transparent 35%),
+          radial-gradient(circle at 85% 20%, #e2efe9 0%, transparent 28%),
+          linear-gradient(160deg, #f4efe6 0%, #f9f6ef 45%, #f2eee6 100%);
+        min-height: 100vh;
+      }
+
+      .wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .hero {
+        background: linear-gradient(120deg, #23423a 0%, #2f6a57 55%, #7da97f 100%);
+        color: #f9fff8;
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-family: 'Fraunces', serif;
+        font-size: clamp(1.6rem, 4vw, 2.3rem);
+        letter-spacing: 0.4px;
+      }
+
+      .hero p {
+        margin: 8px 0 0;
+        color: #e7f4ee;
+      }
+
+      .grid {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 1.05rem;
+      }
+
+      .span-4 {
+        grid-column: span 4;
+      }
+
+      .span-6 {
+        grid-column: span 6;
+      }
+
+      .span-8 {
+        grid-column: span 8;
+      }
+
+      .span-12 {
+        grid-column: span 12;
+      }
+
+      label {
+        display: block;
+        margin-top: 8px;
+        margin-bottom: 4px;
+        font-size: 0.84rem;
+        color: var(--muted);
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        width: 100%;
+        font: inherit;
+      }
+
+      input,
+      select,
+      textarea {
+        border: 1px solid #cbc4b4;
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fff;
+      }
+
+      textarea {
+        min-height: 78px;
+        resize: vertical;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .row-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .btn {
+        margin-top: 12px;
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .btn.secondary {
+        background: #3a4b42;
+      }
+
+      .btn.ghost {
+        background: var(--accent-soft);
+        color: #1c4b3c;
+      }
+
+      .status {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 10px;
+        background: #f6f3ea;
+        border: 1px dashed #cfc6b4;
+        white-space: pre-wrap;
+      }
+
+      .error {
+        color: var(--danger);
+      }
+
+      .list {
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .list li {
+        border-bottom: 1px solid #ece6d8;
+        padding: 8px 0;
+        font-size: 0.92rem;
+      }
+
+      .tag {
+        display: inline-block;
+        font-size: 0.75rem;
+        background: #edf6f1;
+        color: #255c4a;
+        border-radius: 999px;
+        padding: 3px 8px;
+        margin-right: 6px;
+      }
+
+      @media (max-width: 900px) {
+        .span-4,
+        .span-6,
+        .span-8 {
+          grid-column: span 12;
+        }
+
+        .row,
+        .row-3 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <section class="hero">
+        <h1>SettleUp Demo Console</h1>
+        <p>Minimal end-to-end UI for auth, groups, expenses, balances, settlements, and activity logs.</p>
+      </section>
+
+      <section class="grid">
+        <article class="card span-4">
+          <h2>1) Connection</h2>
+          <label for="apiBase">API Base URL</label>
+          <input id="apiBase" value="http://localhost:3001" />
+          <button class="btn ghost" id="btnHealth">Check Health</button>
+          <div class="status" id="healthStatus">Not checked.</div>
+        </article>
+
+        <article class="card span-8">
+          <h2>2) Authentication</h2>
+          <div class="row">
+            <div>
+              <label for="email">Email</label>
+              <input id="email" placeholder="you@example.com" />
+            </div>
+            <div>
+              <label for="password">Password</label>
+              <input id="password" type="password" placeholder="At least 8 chars" />
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn" id="btnRegister">Register</button>
+            <button class="btn secondary" id="btnLogin">Login</button>
+          </div>
+          <div class="status" id="authStatus">Not logged in.</div>
+        </article>
+
+        <article class="card span-6">
+          <h2>3) Groups and Members</h2>
+          <label for="groupName">New Group Name</label>
+          <input id="groupName" placeholder="Roommates" />
+          <button class="btn" id="btnCreateGroup">Create Group</button>
+
+          <div class="row">
+            <div>
+              <label for="groupSelect">Select Group</label>
+              <select id="groupSelect"></select>
+            </div>
+            <div>
+              <label for="memberEmail">Add Member Email</label>
+              <input id="memberEmail" placeholder="friend@example.com" />
+            </div>
+          </div>
+
+          <button class="btn secondary" id="btnAddMember">Add Member</button>
+          <button class="btn ghost" id="btnRefreshMembers">Refresh Members</button>
+          <ul class="list" id="memberList"></ul>
+        </article>
+
+        <article class="card span-6">
+          <h2>4) Expense</h2>
+          <label for="expenseDescription">Description</label>
+          <input id="expenseDescription" placeholder="Groceries" />
+
+          <div class="row-3">
+            <div>
+              <label for="expenseAmount">Amount (cents)</label>
+              <input id="expenseAmount" type="number" min="1" value="1000" />
+            </div>
+            <div>
+              <label for="expenseCurrency">Currency</label>
+              <input id="expenseCurrency" value="CAD" />
+            </div>
+            <div>
+              <label for="expenseType">Split Type</label>
+              <select id="expenseType">
+                <option value="equal">equal</option>
+                <option value="percentage">percentage</option>
+                <option value="exact">exact</option>
+              </select>
+            </div>
+          </div>
+
+          <label for="expenseParticipants">Participant IDs (comma separated, optional for equal)</label>
+          <input id="expenseParticipants" placeholder="uuid1,uuid2" />
+
+          <label for="expenseSplits">Splits JSON for percentage/exact</label>
+          <textarea id="expenseSplits" placeholder='[{"user_id":"...","percentage":50},{"user_id":"...","percentage":50}]'></textarea>
+
+          <button class="btn" id="btnCreateExpense">Create Expense</button>
+          <div class="status" id="expenseStatus">No expense action yet.</div>
+        </article>
+
+        <article class="card span-6">
+          <h2>5) Balances and Settlements</h2>
+          <button class="btn ghost" id="btnLoadBalances">Load Balances</button>
+          <ul class="list" id="balanceList"></ul>
+
+          <div class="row">
+            <div>
+              <label for="settleTo">Settle To (user id)</label>
+              <input id="settleTo" placeholder="creditor user id" />
+            </div>
+            <div>
+              <label for="settleAmount">Amount (cents)</label>
+              <input id="settleAmount" type="number" min="1" value="500" />
+            </div>
+          </div>
+
+          <button class="btn secondary" id="btnCreateSettlement">Create Settlement</button>
+          <div class="status" id="settlementStatus">No settlement action yet.</div>
+        </article>
+
+        <article class="card span-6">
+          <h2>6) Activity</h2>
+          <button class="btn ghost" id="btnLoadActivity">Load Activity</button>
+          <ul class="list" id="activityList"></ul>
+        </article>
+      </section>
+    </div>
+
+    <script>
+      const state = {
+        token: "",
+        user: null,
+        selectedGroupId: "",
+        groups: []
+      };
+
+      const el = (id) => document.getElementById(id);
+
+      async function api(path, options = {}) {
+        const base = el("apiBase").value.trim().replace(/\/$/, "");
+        const headers = {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        };
+
+        if (state.token) {
+          headers.Authorization = `Bearer ${state.token}`;
+        }
+
+        const response = await fetch(`${base}${path}`, {
+          ...options,
+          headers
+        });
+
+        const text = await response.text();
+        let data;
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch (_) {
+          data = { raw: text };
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        return data;
+      }
+
+      function renderGroups() {
+        const select = el("groupSelect");
+        select.innerHTML = "";
+
+        state.groups.forEach((group) => {
+          const option = document.createElement("option");
+          option.value = group.id;
+          option.textContent = `${group.name} (${group.id.slice(0, 8)})`;
+          select.appendChild(option);
+        });
+
+        if (state.groups.length > 0) {
+          state.selectedGroupId = state.groups[0].id;
+          select.value = state.selectedGroupId;
+        } else {
+          state.selectedGroupId = "";
+        }
+      }
+
+      async function refreshGroups() {
+        const groups = await api("/groups");
+        state.groups = groups;
+        renderGroups();
+      }
+
+      async function refreshMembers() {
+        if (!state.selectedGroupId) {
+          throw new Error("Select a group first");
+        }
+
+        const data = await api(`/groups/${state.selectedGroupId}/members`);
+        const list = el("memberList");
+        list.innerHTML = "";
+
+        data.members.forEach((member) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<span class="tag">${member.id.slice(0, 8)}</span>${member.email}`;
+          list.appendChild(li);
+        });
+      }
+
+      function setStatus(id, text, isError = false) {
+        const node = el(id);
+        node.textContent = text;
+        node.className = `status${isError ? " error" : ""}`;
+      }
+
+      el("groupSelect").addEventListener("change", (e) => {
+        state.selectedGroupId = e.target.value;
+      });
+
+      el("btnHealth").addEventListener("click", async () => {
+        try {
+          const health = await api("/health", { method: "GET" });
+          const ready = await api("/ready", { method: "GET" });
+          setStatus("healthStatus", `health.ok=${health.ok}, ready.ok=${ready.ok}`);
+        } catch (err) {
+          setStatus("healthStatus", err.message, true);
+        }
+      });
+
+      async function authFlow(path) {
+        try {
+          const email = el("email").value.trim();
+          const password = el("password").value;
+          const data = await api(path, {
+            method: "POST",
+            body: JSON.stringify({ email, password })
+          });
+
+          state.token = data.token;
+          state.user = data.user;
+
+          await refreshGroups();
+          await refreshMembers().catch(() => {});
+
+          setStatus("authStatus", `Logged in as ${state.user.email}`);
+        } catch (err) {
+          setStatus("authStatus", err.message, true);
+        }
+      }
+
+      el("btnRegister").addEventListener("click", () => authFlow("/auth/register"));
+      el("btnLogin").addEventListener("click", () => authFlow("/auth/login"));
+
+      el("btnCreateGroup").addEventListener("click", async () => {
+        try {
+          const name = el("groupName").value.trim();
+          await api("/groups", {
+            method: "POST",
+            body: JSON.stringify({ name })
+          });
+          await refreshGroups();
+          await refreshMembers();
+          setStatus("authStatus", "Group created.");
+        } catch (err) {
+          setStatus("authStatus", err.message, true);
+        }
+      });
+
+      el("btnAddMember").addEventListener("click", async () => {
+        try {
+          const email = el("memberEmail").value.trim();
+          await api(`/groups/${state.selectedGroupId}/members`, {
+            method: "POST",
+            body: JSON.stringify({ email })
+          });
+          await refreshMembers();
+          setStatus("authStatus", "Member added.");
+        } catch (err) {
+          setStatus("authStatus", err.message, true);
+        }
+      });
+
+      el("btnRefreshMembers").addEventListener("click", async () => {
+        try {
+          await refreshMembers();
+          setStatus("authStatus", "Members refreshed.");
+        } catch (err) {
+          setStatus("authStatus", err.message, true);
+        }
+      });
+
+      el("btnCreateExpense").addEventListener("click", async () => {
+        try {
+          const splitType = el("expenseType").value;
+          const participantRaw = el("expenseParticipants").value.trim();
+          const splitsRaw = el("expenseSplits").value.trim();
+
+          const body = {
+            description: el("expenseDescription").value.trim(),
+            amount_cents: Number(el("expenseAmount").value),
+            currency: el("expenseCurrency").value.trim() || "CAD",
+            split_type: splitType
+          };
+
+          if (participantRaw) {
+            body.participant_ids = participantRaw.split(",").map((x) => x.trim()).filter(Boolean);
+          }
+
+          if ((splitType === "percentage" || splitType === "exact") && splitsRaw) {
+            body.splits = JSON.parse(splitsRaw);
+          }
+
+          const data = await api(`/groups/${state.selectedGroupId}/expenses`, {
+            method: "POST",
+            body: JSON.stringify(body)
+          });
+
+          setStatus("expenseStatus", `Expense created: ${data.expense.id}`);
+        } catch (err) {
+          setStatus("expenseStatus", err.message, true);
+        }
+      });
+
+      el("btnLoadBalances").addEventListener("click", async () => {
+        try {
+          const data = await api(`/groups/${state.selectedGroupId}/balances`, { method: "GET" });
+          const list = el("balanceList");
+          list.innerHTML = "";
+
+          data.balances.forEach((row) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<span class="tag">net ${row.net_cents}</span>${row.email}`;
+            list.appendChild(li);
+          });
+
+          setStatus("settlementStatus", `Debt edges: ${data.debt_graph.length}`);
+        } catch (err) {
+          setStatus("settlementStatus", err.message, true);
+        }
+      });
+
+      el("btnCreateSettlement").addEventListener("click", async () => {
+        try {
+          const toUser = el("settleTo").value.trim();
+          const amount = Number(el("settleAmount").value);
+
+          const data = await api(`/groups/${state.selectedGroupId}/settlements`, {
+            method: "POST",
+            body: JSON.stringify({ to_user: toUser, amount_cents: amount })
+          });
+
+          setStatus("settlementStatus", `Settlement created: ${data.settlement.id}`);
+        } catch (err) {
+          setStatus("settlementStatus", err.message, true);
+        }
+      });
+
+      el("btnLoadActivity").addEventListener("click", async () => {
+        try {
+          const data = await api(`/groups/${state.selectedGroupId}/activity?limit=20&offset=0`, {
+            method: "GET"
+          });
+
+          const list = el("activityList");
+          list.innerHTML = "";
+
+          data.activity.forEach((row) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<span class="tag">${row.action_type}</span>${row.user_email}`;
+            list.appendChild(li);
+          });
+        } catch (err) {
+          setStatus("settlementStatus", err.message, true);
+        }
+      });
+    </script>
+  </body>
+</html>
