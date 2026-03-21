@@ -573,12 +573,12 @@ function App() {
             </div>
           </div>
 
-          <div className="small" style={{marginBottom: '16px'}}>Select members below by name. No UUID input required.</div>
+          <div className="small" style={{marginBottom: '16px', marginTop: '8px'}}>Select members below by name:</div>
 
-          <div className="row" style={{marginBottom: '20px'}}>
+          <div className="row" style={{marginBottom: '20px', alignItems: 'center'}}>
             <button type="button" className="btn-secondary" onClick={() => setAllParticipants(true)}>Select All</button>
             <button type="button" className="btn-secondary" onClick={() => setAllParticipants(false)}>Clear</button>
-            <span className="small badge">Selected: {selectedParticipantIds.length}</span>
+            <span className="small badge" style={{marginLeft: 'auto', fontWeight: '500', color: 'var(--text-main)'}}>Selected: {selectedParticipantIds.length}</span>
           </div>
 
           <div className="split-builder">

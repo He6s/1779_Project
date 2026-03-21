@@ -316,12 +316,14 @@ button:active {
 
 .btn-secondary,
 .secondary-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(99, 122, 255, 0.1);
+  color: var(--accent-color);
   box-shadow: none;
 }
 .btn-secondary:hover,
 .secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(99, 122, 255, 0.2);
+  color: var(--accent-hover);
   box-shadow: none;
 }
 
