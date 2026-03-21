@@ -774,7 +774,8 @@ app.post("/groups/:groupId/expenses", authenticate, async (req, res) => {
       currency = "CAD",
       split_type: splitType = "equal",
       participant_ids: participantIds,
-      splits
+      splits,
+      payer_id: payerId
     } = req.body;
 
     if (!description || !amountCents) {
@@ -799,6 +800,8 @@ app.post("/groups/:groupId/expenses", authenticate, async (req, res) => {
       });
     }
 
+    const actualPayerId = payerId || req.user.id;
+
     const db = await pool.connect();
     let notificationJobs = [];
 
@@ -812,6 +815,13 @@ app.post("/groups/:groupId/expenses", authenticate, async (req, res) => {
         return res.status(403).json({
           ok: false,
           error: "forbidden"
+        });
+      }
+
+      if (!memberSet.has(actualPayerId)) {
+        return res.status(400).json({
+          ok: false,
+          error: "payer must be a group member"
         });
       }
 
@@ -905,7 +915,7 @@ app.post("/groups/:groupId/expenses", authenticate, async (req, res) => {
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id, group_id, paid_by, description, amount_cents, currency, created_at
         `,
-        [groupId, req.user.id, description, amountCents, currency]
+        [groupId, actualPayerId, description, amountCents, currency]
       );
 
       const expense = expenseResult.rows[0];
@@ -1113,12 +1123,12 @@ app.get("/groups/:groupId/balances", authenticate, async (req, res) => {
 app.post("/groups/:groupId/settlements", authenticate, async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { to_user: toUser, amount_cents: amountCents } = req.body;
+    const { from_user: fromUser, to_user: toUser, amount_cents: amountCents } = req.body;
 
-    if (!toUser || !amountCents) {
+    if (!fromUser || !toUser || !amountCents) {
       return res.status(400).json({
         ok: false,
-        error: "to_user and amount_cents are required"
+        error: "from_user, to_user and amount_cents are required"
       });
     }
 
@@ -1129,17 +1139,17 @@ app.post("/groups/:groupId/settlements", authenticate, async (req, res) => {
       });
     }
 
-    if (toUser === req.user.id) {
+    if (fromUser === toUser) {
       return res.status(400).json({
         ok: false,
         error: "cannot settle with self"
       });
     }
 
-    const requesterMember = await isGroupMember(groupId, req.user.id);
-    const targetMember = await isGroupMember(groupId, toUser);
+    const fromMember = await isGroupMember(groupId, fromUser);
+    const toMember = await isGroupMember(groupId, toUser);
 
-    if (!requesterMember || !targetMember) {
+    if (!fromMember || !toMember) {
       return res.status(403).json({
         ok: false,
         error: "both users must be group members"
@@ -1158,7 +1168,7 @@ app.post("/groups/:groupId/settlements", authenticate, async (req, res) => {
         VALUES ($1, $2, $3, $4)
         RETURNING id, group_id, from_user, to_user, amount_cents, created_at
         `,
-        [groupId, req.user.id, toUser, amountCents]
+        [groupId, fromUser, toUser, amountCents]
       );
 
       const settlement = settlementResult.rows[0];
@@ -1186,8 +1196,8 @@ app.post("/groups/:groupId/settlements", authenticate, async (req, res) => {
         eventType: "settlement_recorded",
         amountCents,
         description: "Settlement payment",
-        extra: `${req.user.email} paid user ${toUser}`,
-        recipientUserIds: [req.user.id, toUser]
+        extra: `Settlement recorded: ${fromUser} paid ${toUser}`,
+        recipientUserIds: [fromUser, toUser]
       });
 
       await db.query("COMMIT");

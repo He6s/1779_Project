@@ -69,6 +69,7 @@ function App() {
 
   const [expenseDescription, setExpenseDescription] = useState("Groceries");
   const [expenseAmount, setExpenseAmount] = useState(1000);
+  const [expensePayer, setExpensePayer] = useState("");
   const [splitType, setSplitType] = useState("equal");
   const [participantEnabled, setParticipantEnabled] = useState({});
   const [splitValues, setSplitValues] = useState({});
@@ -76,6 +77,7 @@ function App() {
   const [balances, setBalances] = useState([]);
   const [debtGraph, setDebtGraph] = useState([]);
 
+  const [settleFrom, setSettleFrom] = useState("");
   const [settleTo, setSettleTo] = useState("");
   const [settleAmount, setSettleAmount] = useState(500);
 
@@ -100,8 +102,8 @@ function App() {
   }, [members]);
 
   const settlementTargets = useMemo(
-    () => members.filter((member) => !currentUser || member.id !== currentUser.id),
-    [members, currentUser]
+    () => members,
+    [members]
   );
 
   useEffect(() => {
@@ -123,10 +125,19 @@ function App() {
   }, [members]);
 
   useEffect(() => {
+    if (!settlementTargets.some((member) => member.id === settleFrom)) {
+      setSettleFrom(settlementTargets[0]?.id || "");
+    }
     if (!settlementTargets.some((member) => member.id === settleTo)) {
       setSettleTo(settlementTargets[0]?.id || "");
     }
-  }, [settlementTargets, settleTo]);
+  }, [settlementTargets, settleFrom, settleTo]);
+
+  useEffect(() => {
+    if (currentUser) {
+      setExpensePayer(currentUser.id);
+    }
+  }, [currentUser]);
 
   async function api(path, options = {}) {
     const base = apiBase.replace(/\/$/, "");
@@ -216,6 +227,13 @@ function App() {
       return;
     }
 
+    // Check if the member is already in the group
+    const existingMember = members.find(member => member.email === memberEmail);
+    if (existingMember) {
+      setStatus("User has already been added to the group");
+      return;
+    }
+
     await run(async () => {
       await api(`/groups/${selectedGroupId}/members`, {
         ...toJsonBody({
@@ -249,12 +267,18 @@ function App() {
       return;
     }
 
+    if (!expensePayer) {
+      setStatus("Select who paid for the expense");
+      return;
+    }
+
     await run(async () => {
       const payload = {
         description: expenseDescription,
         amount_cents: Number(expenseAmount),
         currency: "CAD",
-        split_type: splitType
+        split_type: splitType,
+        payer_id: expensePayer
       };
 
       if (splitType === "equal") {
@@ -363,14 +387,25 @@ function App() {
       return;
     }
 
+    if (!settleFrom) {
+      setStatus("Select who is paying");
+      return;
+    }
+
     if (!settleTo) {
-      setStatus("Select a settlement target member");
+      setStatus("Select who is receiving payment");
+      return;
+    }
+
+    if (settleFrom === settleTo) {
+      setStatus("Payer and payee cannot be the same person");
       return;
     }
 
     await run(async () => {
       const data = await api(`/groups/${selectedGroupId}/settlements`, {
         ...toJsonBody({
+          from_user: settleFrom,
           to_user: settleTo,
           amount_cents: Number(settleAmount)
         })
@@ -487,6 +522,18 @@ function App() {
           <input value={expenseDescription} onChange={(e) => setExpenseDescription(e.target.value)} placeholder="Description" />
           <input type="number" min="1" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} placeholder="Amount cents" />
         </div>
+        <div>
+          <label>
+            Who paid? 
+            <select value={expensePayer} onChange={(e) => setExpensePayer(e.target.value)}>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {getMemberLabel(member)} ({member.email})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <div className="grid2">
           <select value={splitType} onChange={(e) => setSplitType(e.target.value)}>
             <option value="equal">equal</option>
@@ -545,6 +592,7 @@ function App() {
           <button onClick={onLoadBalances}>Load Balances</button>
         </div>
 
+        <h3>Net Balances</h3>
         <ul>
           {balances.map((b) => (
             <li key={b.user_id}>
@@ -553,18 +601,48 @@ function App() {
           ))}
         </ul>
 
-        <p className="small">Debt edges: {debtGraph.length}</p>
+        <h3>Who Owes Who</h3>
+        <ul>
+          {debtGraph.map((edge, index) => (
+            <li key={index}>
+              {memberById[edge.from_user]?.email || edge.from_user} owes {memberById[edge.to_user]?.email || edge.to_user} {formatCents(edge.amount_cents)}
+            </li>
+          ))}
+        </ul>
+        {debtGraph.length === 0 && <p className="small">No outstanding debts</p>}
 
-        <div className="grid2">
-          <select value={settleTo} onChange={(e) => setSettleTo(e.target.value)}>
-            {settlementTargets.length === 0 && <option value="">Load members first</option>}
-            {settlementTargets.map((member) => (
-              <option key={member.id} value={member.id}>
-                {getMemberLabel(member)} ({member.email})
-              </option>
-            ))}
-          </select>
-          <input type="number" min="1" value={settleAmount} onChange={(e) => setSettleAmount(e.target.value)} placeholder="amount cents" />
+        <h3>Record Settlement</h3>
+        <div>
+          <label>
+            Who is paying:
+            <select value={settleFrom} onChange={(e) => setSettleFrom(e.target.value)}>
+              {settlementTargets.length === 0 && <option value="">Load members first</option>}
+              {settlementTargets.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {getMemberLabel(member)} ({member.email})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div>
+          <label>
+            Who is receiving:
+            <select value={settleTo} onChange={(e) => setSettleTo(e.target.value)}>
+              {settlementTargets.length === 0 && <option value="">Load members first</option>}
+              {settlementTargets.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {getMemberLabel(member)} ({member.email})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div>
+          <label>
+            Amount (cents):
+            <input type="number" min="1" value={settleAmount} onChange={(e) => setSettleAmount(e.target.value)} placeholder="amount cents" />
+          </label>
         </div>
 
         <button onClick={onCreateSettlement}>Create Settlement</button>
