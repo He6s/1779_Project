@@ -52,7 +52,7 @@ function formatCents(value) {
 }
 
 function App() {
-  const [apiBase, setApiBase] = useState(DEFAULT_API_BASE);
+  const [activeTab, setActiveTab] = useState("auth"); 
   const [status, setStatus] = useState("Ready");
 
   const [email, setEmail] = useState("");
@@ -140,7 +140,7 @@ function App() {
   }, [currentUser]);
 
   async function api(path, options = {}) {
-    const base = apiBase.replace(/\/$/, "");
+    const base = DEFAULT_API_BASE.replace(/\/$/, "");
     const headers = {
       ...(options.headers || {}),
       ...buildAuthHeaders(token)
@@ -195,7 +195,7 @@ function App() {
 
   async function refreshGroups(overrideToken) {
     const authToken = overrideToken || token;
-    const base = apiBase.replace(/\/$/, "");
+    const base = DEFAULT_API_BASE.replace(/\/$/, "");
     const response = await fetch(`${base}/groups`, {
       headers: { ...buildAuthHeaders(authToken) }
     });
@@ -449,216 +449,253 @@ function App() {
   return (
     <div className="page">
       <header className="hero">
-        <h1>SettleUp React Console</h1>
-        <p>Production-track React frontend for project delivery.</p>
+        <h1>SettleUp</h1>
+        <p>A fast and transparent expense splitting loop.</p>
       </header>
 
-      <section className="panel">
-        <h2>Connection</h2>
-        <input value={apiBase} onChange={(e) => setApiBase(e.target.value)} placeholder="API base URL" />
-      </section>
+      <nav className="nav-bar">
+        {['auth', 'groups', 'expense', 'balances', 'activity'].map(tab => (
+          <button 
+            key={tab}
+            className={`nav-tab ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </nav>
 
-      <section className="panel">
-        <h2>Auth</h2>
-        <div className="grid2">
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-        </div>
-        <div className="row">
-          <button onClick={onRegister}>Register</button>
-          <button onClick={onLogin}>Login</button>
-          <button onClick={() => run(async () => refreshGroups())}>Refresh Groups</button>
-        </div>
-        <p className="small">Current user: {currentUser ? currentUser.email : "none"}</p>
-      </section>
-
-      <section className="panel">
-        <h2>Groups & Members</h2>
-        <div className="grid2">
-          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Group name" />
-          <button onClick={onCreateGroup}>Create Group</button>
-        </div>
-
-        <div className="grid2">
-          <select value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
-            <option value="">Select group</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-          <input value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="Member email" />
-        </div>
-
-        <div className="grid2">
-          <input
-            value={memberNickname}
-            onChange={(e) => setMemberNickname(e.target.value)}
-            placeholder="Member display name (optional, e.g. David)"
-          />
-          <div className="small">Tip: add nickname now so splits can be selected by name.</div>
-        </div>
-
-        <div className="row">
-          <button onClick={onAddMember}>Add Member</button>
-          <button onClick={onLoadMembers}>Load Members</button>
-        </div>
-
-        <ul>
-          {members.map((m) => (
-            <li key={m.id}>
-              {getMemberLabel(m)} ({m.email})
-            </li>
-          ))}
-        </ul>
-
-        {selectedGroup && <p className="small">Selected group: {selectedGroup.name}</p>}
-      </section>
-
-      <section className="panel">
-        <h2>Expense</h2>
-        <div className="grid2">
-          <input value={expenseDescription} onChange={(e) => setExpenseDescription(e.target.value)} placeholder="Description" />
-          <input type="number" min="1" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} placeholder="Amount cents" />
-        </div>
-        <div>
-          <label>
-            Who paid? 
-            <select value={expensePayer} onChange={(e) => setExpensePayer(e.target.value)}>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {getMemberLabel(member)} ({member.email})
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="grid2">
-          <select value={splitType} onChange={(e) => setSplitType(e.target.value)}>
-            <option value="equal">equal</option>
-            <option value="percentage">percentage</option>
-            <option value="exact">exact</option>
-          </select>
-          <div className="small">Select members below by name. No UUID input required.</div>
-        </div>
-
-        <div className="row">
-          <button type="button" onClick={() => setAllParticipants(true)}>Select All</button>
-          <button type="button" onClick={() => setAllParticipants(false)}>Clear</button>
-          <span className="small">Selected: {selectedParticipantIds.length}</span>
-        </div>
-
-        <div className="split-builder">
-          {members.map((member) => (
-            <div key={member.id} className="split-row">
-              <label className="member-toggle">
-                <input
-                  type="checkbox"
-                  checked={Boolean(participantEnabled[member.id])}
-                  onChange={() => toggleParticipant(member.id)}
-                />
-                <span>{getMemberLabel(member)}</span>
-                <span className="small">({member.email})</span>
-              </label>
-
-              {(splitType === "percentage" || splitType === "exact") && (
-                <input
-                  type="number"
-                  min="0"
-                  step={splitType === "percentage" ? "0.01" : "1"}
-                  value={splitValues[member.id] ?? ""}
-                  onChange={(e) => updateSplitValue(member.id, e.target.value)}
-                  placeholder={splitType === "percentage" ? "percentage" : "owed cents"}
-                  disabled={!participantEnabled[member.id]}
-                />
-              )}
+      {activeTab === 'auth' && (
+        <section className="panel animate-fade-in">
+          <h2>Authentication</h2>
+          <div className="grid2">
+            <div className="input-field">
+              <input id="authEmail" value={email} onChange={(e) => setEmail(e.target.value)} placeholder=" " />
+              <label htmlFor="authEmail">Email</label>
             </div>
-          ))}
-        </div>
+            <div className="input-field">
+              <input id="authPass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder=" " />
+              <label htmlFor="authPass">Password</label>
+            </div>
+          </div>
+          <div className="row">
+            <button onClick={onRegister}>Register</button>
+            <button onClick={onLogin}>Login</button>
+            <button onClick={() => run(async () => refreshGroups())}>Refresh Groups</button>
+          </div>
+          <p className="small" style={{marginTop: '12px'}}>Current user: {currentUser ? currentUser.email : "none"}</p>
+        </section>
+      )}
 
-        <p className="small">
-          {splitType === "equal" && "Equal: selected members share the total equally."}
-          {splitType === "percentage" && "Percentage: selected percentages must sum to 100."}
-          {splitType === "exact" && "Exact: selected owed_cents must sum to total amount_cents."}
-        </p>
+      {activeTab === 'groups' && (
+        <section className="panel animate-fade-in">
+          <h2>Groups & Members</h2>
+          <div className="grid2">
+            <div className="input-field">
+              <input id="groupName" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder=" " />
+              <label htmlFor="groupName">Group name</label>
+            </div>
+            <button onClick={onCreateGroup}>Create Group</button>
+          </div>
 
-        <button onClick={onCreateExpense}>Create Expense</button>
-      </section>
+          <div className="grid2">
+            <div className="input-field">
+              <select id="groupSelect" value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
+                <option value="">Select group</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="input-field">
+              <input id="memberEmail" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder=" " />
+              <label htmlFor="memberEmail">Member email</label>
+            </div>
+          </div>
 
-      <section className="panel">
-        <h2>Balances & Settlements</h2>
-        <div className="row">
-          <button onClick={onLoadBalances}>Load Balances</button>
-        </div>
+          <div className="grid2">
+            <div className="input-field">
+              <input id="memberNickname" value={memberNickname} onChange={(e) => setMemberNickname(e.target.value)} placeholder=" " />
+              <label htmlFor="memberNickname">Member display name (optional, e.g. David)</label>
+            </div>
+          </div>
+          <div className="small" style={{marginBottom: '16px'}}>Tip: add nickname now so splits can be selected by name.</div>
 
-        <h3>Net Balances</h3>
-        <ul>
-          {balances.map((b) => (
-            <li key={b.user_id}>
-              {b.email}: {formatCents(b.net_cents)}
-            </li>
-          ))}
-        </ul>
+          <div className="row">
+            <button onClick={onAddMember}>Add Member</button>
+            <button onClick={onLoadMembers}>Load Members</button>
+          </div>
 
-        <h3>Who Owes Who</h3>
-        <ul>
-          {debtGraph.map((edge, index) => (
-            <li key={index}>
-              {memberById[edge.from_user]?.email || edge.from_user} owes {memberById[edge.to_user]?.email || edge.to_user} {formatCents(edge.amount_cents)}
-            </li>
-          ))}
-        </ul>
-        {debtGraph.length === 0 && <p className="small">No outstanding debts</p>}
+          <ul className="member-list">
+            {members.map((m) => (
+              <li key={m.id}>
+                {getMemberLabel(m)} ({m.email})
+              </li>
+            ))}
+          </ul>
+          {selectedGroup && <p className="small">Selected group: {selectedGroup.name}</p>}
+        </section>
+      )}
 
-        <h3>Record Settlement</h3>
-        <div>
-          <label>
-            Who is paying:
-            <select value={settleFrom} onChange={(e) => setSettleFrom(e.target.value)}>
-              {settlementTargets.length === 0 && <option value="">Load members first</option>}
-              {settlementTargets.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {getMemberLabel(member)} ({member.email})
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div>
-          <label>
-            Who is receiving:
-            <select value={settleTo} onChange={(e) => setSettleTo(e.target.value)}>
-              {settlementTargets.length === 0 && <option value="">Load members first</option>}
-              {settlementTargets.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {getMemberLabel(member)} ({member.email})
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div>
-          <label>
-            Amount (cents):
-            <input type="number" min="1" value={settleAmount} onChange={(e) => setSettleAmount(e.target.value)} placeholder="amount cents" />
-          </label>
-        </div>
+      {activeTab === 'expense' && (
+        <section className="panel animate-fade-in">
+          <h2>Expense</h2>
+          <div className="grid2">
+            <div className="input-field">
+              <input id="expenseDesc" value={expenseDescription} onChange={(e) => setExpenseDescription(e.target.value)} placeholder=" " />
+              <label htmlFor="expenseDesc">Description</label>
+            </div>
+            <div className="input-field">
+              <input id="expenseAmt" type="number" min="1" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} placeholder=" " />
+              <label htmlFor="expenseAmt">Amount cents</label>
+            </div>
+          </div>
+          
+          <div className="grid2" style={{marginBottom: '16px'}}>
+            <div className="input-field">
+              <select id="expensePayer" value={expensePayer} onChange={(e) => setExpensePayer(e.target.value)}>
+                <option value="" disabled hidden></option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {getMemberLabel(member)} ({member.email})
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="expensePayer">Who paid?</label>
+            </div>
+            <div className="input-field">
+              <select id="splitType" value={splitType} onChange={(e) => setSplitType(e.target.value)}>
+                <option value="equal">equal</option>
+                <option value="percentage">percentage</option>
+                <option value="exact">exact</option>
+              </select>
+              <label htmlFor="splitType">Split type</label>
+            </div>
+          </div>
 
-        <button onClick={onCreateSettlement}>Create Settlement</button>
-      </section>
+          <div className="small" style={{marginBottom: '16px'}}>Select members below by name. No UUID input required.</div>
 
-      <section className="panel">
-        <h2>Activity</h2>
-        <button onClick={onLoadActivity}>Load Activity</button>
-        <ul>
-          {activity.map((a) => (
-            <li key={a.id}>
-              {formatActivityItem(a)}
-            </li>
-          ))}
-        </ul>
-      </section>
+          <div className="row" style={{marginBottom: '20px'}}>
+            <button type="button" className="btn-secondary" onClick={() => setAllParticipants(true)}>Select All</button>
+            <button type="button" className="btn-secondary" onClick={() => setAllParticipants(false)}>Clear</button>
+            <span className="small badge">Selected: {selectedParticipantIds.length}</span>
+          </div>
+
+          <div className="split-builder">
+            {members.map((member) => (
+              <div key={member.id} className="split-row">
+                <label className="member-toggle" style={{margin: 0}}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(participantEnabled[member.id])}
+                    onChange={() => toggleParticipant(member.id)}
+                  />
+                  <span>{getMemberLabel(member)}</span>
+                  <span className="small">({member.email})</span>
+                </label>
+
+                {(splitType === "percentage" || splitType === "exact") && (
+                  <div className="input-field" style={{marginBottom: 0}}>
+                    <input
+                      id={`split-${member.id}`}
+                      type="number"
+                      min="0"
+                      step={splitType === "percentage" ? "0.01" : "1"}
+                      value={splitValues[member.id] ?? ""}
+                      onChange={(e) => updateSplitValue(member.id, e.target.value)}
+                      placeholder=" "
+                      disabled={!participantEnabled[member.id]}
+                    />
+                    <label htmlFor={`split-${member.id}`}>{splitType === "percentage" ? "Percentage" : "Owed cents"}</label>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <p className="small" style={{marginTop: '16px', marginBottom: '24px'}}>
+            {splitType === "equal" && "Equal: selected members share the total equally."}
+            {splitType === "percentage" && "Percentage: selected percentages must sum to 100."}
+            {splitType === "exact" && "Exact: selected owed_cents must sum to total amount_cents."}
+          </p>
+
+          <button onClick={onCreateExpense}>Create Expense</button>
+        </section>
+      )}
+
+      {activeTab === 'balances' && (
+        <section className="panel animate-fade-in">
+          <h2>Balances & Settlements</h2>
+          <div className="row">
+            <button onClick={onLoadBalances}>Load Balances</button>
+          </div>
+
+          <h3>Net Balances</h3>
+          <ul>
+            {balances.map((b) => (
+              <li key={b.user_id}>
+                {b.email}: <strong style={{color: b.net_cents < 0 ? '#ef4444' : '#10b981'}}>{formatCents(b.net_cents)}</strong>
+              </li>
+            ))}
+          </ul>
+
+          <h3>Who Owes Who</h3>
+          <ul>
+            {debtGraph.map((edge, index) => (
+              <li key={index}>
+                {memberById[edge.from_user]?.email || edge.from_user} owes {memberById[edge.to_user]?.email || edge.to_user} <strong>{formatCents(edge.amount_cents)}</strong>
+              </li>
+            ))}
+          </ul>
+          {debtGraph.length === 0 && <p className="small">No outstanding debts</p>}
+
+          <h3 style={{marginTop: '32px'}}>Record Settlement</h3>
+          <div className="grid2">
+            <div className="input-field">
+              <select id="settleFrom" value={settleFrom} onChange={(e) => setSettleFrom(e.target.value)}>
+                {settlementTargets.length === 0 && <option value="" disabled hidden></option>}
+                {settlementTargets.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {getMemberLabel(member)} ({member.email})
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="settleFrom">Who is paying</label>
+            </div>
+            <div className="input-field">
+              <select id="settleTo" value={settleTo} onChange={(e) => setSettleTo(e.target.value)}>
+                {settlementTargets.length === 0 && <option value="" disabled hidden></option>}
+                {settlementTargets.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {getMemberLabel(member)} ({member.email})
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="settleTo">Who is receiving</label>
+            </div>
+          </div>
+          <div className="input-field" style={{maxWidth: '220px', marginBottom: '24px'}}>
+            <input id="settleAmount" type="number" min="1" value={settleAmount} onChange={(e) => setSettleAmount(e.target.value)} placeholder=" " />
+            <label htmlFor="settleAmount">Amount (cents)</label>
+          </div>
+
+          <button onClick={onCreateSettlement}>Create Settlement</button>
+        </section>
+      )}
+
+      {activeTab === 'activity' && (
+        <section className="panel animate-fade-in">
+          <h2>Activity</h2>
+          <button onClick={onLoadActivity} style={{marginBottom: '24px'}}>Load Activity</button>
+          <ul>
+            {activity.map((a) => (
+              <li key={a.id}>
+                {formatActivityItem(a)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <footer className="status">{status}</footer>
     </div>

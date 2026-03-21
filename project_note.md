@@ -1,6 +1,6 @@
 # Project Notes for Final Report (Working Draft)
 
-Last updated: 2026-03-19
+Last updated: 2026-03-21
 Purpose: Capture report-ready facts from implementation and validation so the final README report can be written quickly and accurately.
 
 Template file for final report drafting:
@@ -16,6 +16,13 @@ Latest update (2026-03-19):
 - Member UX: nickname-enabled member display and name-based split selection for percentage/exact.
 - Settlement UX: settlement target now selectable by member name in frontend.
 - Activity UX: frontend now renders expense description and amount from activity payload.
+
+Latest update (2026-03-21):
+- Expense UX: payer can be explicitly selected during expense creation (`payer_id`), and payer is validated as a group member.
+- Group member UX: add-member flow now blocks duplicate users already in the group.
+- Settlement UX: settlement now records both `from_user` and `to_user`, with frontend displaying net balances plus owes-who edges.
+- UI/UX Overhaul: Fully redesigned the React frontend with a modern glassmorphism aesthetic, featuring floating input labels, custom animated checkboxes, tab-based navigation, and a fluid, animated pastel radial-gradient background.
+- Deployment Ops: Addressed `IfNotPresent` image caching in DOKS Kubernetes limits by explicitly bumping UI image tags (`v2-ui`, `v3-ui`, etc.) to force UI rollouts. Realigned doctl registry names (`mdgh-1779`).
 
 ## 2. Report-Ready Content by Required Sections
 
@@ -54,7 +61,10 @@ Note for final report accuracy:
 - Optional member nickname support for improved member identification.
 - Expense creation with equal/percentage/exact split validation.
 - React split builder supports name-based selection for percentage/exact input (no raw UUID entry required in normal flow).
+- Expense payer selection is supported in frontend and API (`payer_id`), not fixed to current login user.
 - Settlement target supports name-based dropdown selection in frontend.
+- Settlement form supports both payer and receiver selection (`from_user` -> `to_user`) with same-user guard.
+- Add-member flow includes duplicate-member check before submission.
 - Activity list now includes expense description and amount for expense events.
 - Balance and debt-graph calculation.
 - Settlement recording and activity log.

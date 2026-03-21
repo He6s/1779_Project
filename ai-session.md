@@ -61,7 +61,10 @@ The team did not treat AI output as automatically correct. Instead, AI-generated
 - Frontend migrated from temporary demo page to React for final deliverable alignment.
 - DOKS rollout issues were debugged and fixed across script patching, registry image pulls, DB PGDATA pathing, and resource right-sizing.
 - Expense UX improved to support member nicknames and name-based split selection for percentage/exact modes.
+- Expense flow updated to support explicit payer selection (`payer_id`) with backend validation that payer belongs to the group.
 - Settlement UI improved to select target member by name instead of raw user id.
+- Settlement flow updated to collect both payer (`from_user`) and receiver (`to_user`), plus same-user validation.
+- Group member add flow now checks for duplicate existing users before submission.
 - Activity rendering improved to show expense description and amount from activity payload.
 
 ## 6.2 Deployment operation lesson (build/push before set-image)

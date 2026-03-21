@@ -48,11 +48,15 @@ Implementation note:
 - Optional member nickname support for better readability in group operations.
 - Expense creation with equal/percentage/exact split validation.
 - Name-based split builder for percentage/exact modes (no manual UUID typing required).
+- Expense payer selection support (`payer_id`) so payer can be selected explicitly within group members.
 - Group balance computation and debt graph generation.
 - Settlement recording between members.
 - Settlement target selection by member name (dropdown), not raw user id input.
+- Settlement form supports both payer (`from_user`) and receiver (`to_user`) selection with same-user validation.
+- Group member add flow includes duplicate-member check in UI to prevent re-adding existing users.
 - Activity log for auditable group events.
 - Activity detail rendering includes expense description and amount (for example: Groceries, 1200 cents).
+- Modern, responsive User Interface utilizing glassmorphism themes, floating labels, animated custom checkboxes, dynamic tabbed navigation, and a soft pastel fluid background.
 - Asynchronous email notification job processing.
 - Health and readiness endpoints.
 - Prometheus-compatible metrics endpoint.
@@ -87,9 +91,8 @@ docker compose ps
 ```
 5. Open the web app:
 - `http://localhost:3000`
-6. In the Connection field (top of the page), the app auto-fills API base from runtime deployment config (local default: `http://localhost:3001`).
-7. If needed, you can still manually override the API base.
-8. Optional API health checks:
+6. The frontend automatically points to its respective environment API Base URL (`http://localhost:3001` or the deployment URL) meaning no manual connection inputs are required for users.
+7. Optional API health checks:
 ```bash
 curl http://localhost:3001/health
 curl http://localhost:3001/ready
@@ -114,9 +117,11 @@ Use this exact flow for a demo.
 4. Add User B to the group
 - In member management, add User B by email.
 - Optional: set a nickname so members are easier to recognize in split selection.
+- If a user is already in the group, UI shows a duplicate-member warning and blocks repeated add.
 
 5. Create an expense
 - Example: description "Dinner", amount `1000` cents.
+- Choose who paid for this expense from current group members.
 - Choose split type `equal`.
 - Submit.
 
@@ -131,7 +136,8 @@ Notes for split input UX:
 
 7. Record a settlement
 - Login as the debtor user.
-- Record settlement to the creditor for the owed amount.
+- Select both payer (who is paying) and receiver (who is receiving) in the settlement form.
+- Record settlement for the owed amount.
 
 8. Re-check balances
 - Both users should return close to zero net balance after full settlement.
@@ -145,7 +151,7 @@ If you are evaluating the deployed system, use:
 - Application URL: `http://152.42.147.84:3000`
 - API URL: `http://152.42.147.82:3001`
 
-The Connection input is auto-filled from runtime deployment config, so cloud access should work without manual edits.
+The API bindings are handled implicitly as the UI hides network connection details from standard users for a cleaner software experience.
 
 How to interpret URLs:
 - Local demo always uses `localhost` URLs.
@@ -153,8 +159,6 @@ How to interpret URLs:
 - Changing to another computer does not require changing URLs if you are still visiting the same deployment URL.
 - Redeploying to a different cluster/project may produce new external IPs, so cloud URLs may need to be updated.
 - The runtime auto-link strategy is correct. It avoids hardcoding API URLs into frontend build artifacts.
-
-If your API host is different, update the Connection value directly in the UI.
 
 For API checks:
 ```bash
@@ -315,7 +319,7 @@ curl http://152.42.147.82:3001/ready
 - Local Kubernetes (kind) deployment verified, including rollout and in-cluster API flow.
 - DOKS deployment executed successfully on `ece1779-cluster`, with runtime verification passed.
 - Cloud deployments now use explicit unique tags for rollout safety (avoid relying on `latest`).
-- Latest deployed feature bundle includes: member nickname/split UX improvements, settlement dropdown by name, and richer activity detail rendering.
+- Latest deployed feature bundle includes: member nickname/split UX improvements, expense payer selection, duplicate-member guard in add-member flow, settlement from/to selection with owes-who display, and richer activity detail rendering.
 
 ### DOKS deployment commands
 Using this team's verified values:

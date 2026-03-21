@@ -1,7 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  font-family: "Segoe UI", sans-serif;
-  color: #1e293b;
-  background: #f8fafc;
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --bg-color: #f7ebfd; 
+  --text-main: #2b3467; 
+  --text-muted: #576585; /* Slightly darker for better label visibility */
+  --accent-color: #637aff; /* Perfect middle-ground: A vibrant but soft royal blue */
+  --accent-glow: rgba(99, 122, 255, 0.25);
+  --accent-hover: #566eed;
+  --glass-bg: rgba(255, 255, 255, 0.6); 
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 8px 32px rgba(30, 58, 138, 0.05); 
+  --card-radius: 16px;
+  --input-bg: rgba(255, 255, 255, 0.85); /* Much stronger presence so it doesn't get lost */
+  --input-text: #2b3467;
+  --input-border: rgba(190, 205, 235, 0.8); /* Slightly darker border for contrast */
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --success-color: #10b981;
 }
 
 * {
@@ -10,132 +25,432 @@
 
 body {
   margin: 0;
+  font-family: var(--font-family);
+  color: var(--text-main);
+  background-color: #faf5ff;
+  background-image: 
+    radial-gradient(ellipse at 10% 10%, rgba(228, 235, 255, 0.9) 0%, transparent 60%),
+    radial-gradient(ellipse at 90% 20%, rgba(246, 230, 255, 0.9) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(226, 242, 255, 0.9) 0%, transparent 60%),
+    radial-gradient(ellipse at 20% 80%, rgba(243, 230, 255, 0.9) 0%, transparent 60%);
+  background-size: cover;
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .page {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 32px 24px;
 }
 
+/* 4. Animated Interactive Web Elements (Hero/Header) */
 .hero {
-  background: linear-gradient(120deg, #0f766e, #14b8a6);
-  color: #f0fdfa;
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text-main); /* Match main text color rather than white, significantly improving readability */
+  border-radius: var(--card-radius);
+  border: 1px solid var(--glass-border);
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: linear-gradient(135deg, var(--accent-color), #8b5cf6);
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.5;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-20px, 20px) scale(1.1); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 .hero h1 {
   margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  z-index: 1;
 }
 
+/* 3. Progressive Card-based Logic Design */
 .panel {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--glass-shadow);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .panel h2 {
   margin-top: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .row {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
+/* 2. Selection panel / option area design */
 .split-builder {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 8px;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .split-row {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(120px, 180px);
-  gap: 8px;
+  gap: 12px;
   align-items: center;
-  margin-bottom: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: var(--transition);
+}
+
+.split-row:hover {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.split-row:has(input[type="checkbox"]:checked) {
+  background: rgba(92, 124, 250, 0.08); /* Highlight selected row with new accent color base */
 }
 
 .member-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-}
-
-.member-toggle input[type="checkbox"] {
-  width: auto;
-}
-
-input,
-select,
-textarea,
-button {
-  font: inherit;
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  border: 1px solid #cbd5e1;
+  padding: 8px;
   border-radius: 8px;
-  padding: 10px;
-}
-
-textarea {
-  min-height: 90px;
-  margin-bottom: 8px;
-}
-
-button {
-  background: #0f766e;
-  color: #f8fafc;
-  border: 0;
-  border-radius: 8px;
-  padding: 10px 12px;
   cursor: pointer;
+  transition: var(--transition);
+}
+
+/* Custom Checkboxes - Matches screenshot 3 exactly */
+input[type="checkbox"] {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--text-muted);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* 1. Animated input field design - Floating Labels (Screenshot 6/7) */
+.input-field {
+  position: relative;
+  width: 100%;
+}
+
+.input-field input,
+.input-field select,
+.input-field textarea {
+  font-family: var(--font-family);
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-main);
+  border-radius: 12px; /* Rounded arc corners as requested */
+  padding: 22px 16px 8px 16px;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  outline: none;
+}
+
+.input-field label {
+  position: absolute;
+  left: 16px;
+  top: 15px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  transition: var(--transition);
+  pointer-events: none;
+}
+
+.input-field input:focus,
+.input-field select:focus,
+.input-field textarea:focus {
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 1); /* Solid white background on focus */
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.input-field input:focus ~ label,
+.input-field input:not(:placeholder-shown) ~ label,
+.input-field select ~ label,
+.input-field textarea:focus ~ label,
+.input-field textarea:not(:placeholder-shown) ~ label {
+  top: 6px;
+  font-size: 0.7rem;
+  color: var(--accent-color);
+}
+
+/* Dropdown specific */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px !important;
+}
+select option {
+  background: var(--bg-color);
+  color: var(--text-main);
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Buttons */
+button {
+  font-family: var(--font-family);
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  border-radius: 12px; /* Matched fully rounded corner language */
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px var(--accent-glow); /* Muted the glow significantly */
 }
 
 button:hover {
-  background: #0d9488;
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow); /* Muted hover glow */
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+.btn-secondary,
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+.btn-secondary:hover,
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+/* Navigation Bar - Matches Screenshot 5 */
+.nav-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 99px;
+  padding: 6px 8px;
+  margin: 0 auto 32px auto;
+  width: fit-content;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--glass-shadow);
+}
+
+.nav-tab {
+  padding: 10px 24px;
+  border-radius: 99px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-style: italic; /* Match slightly stylized text looking like screenshot 5 */
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.nav-tab:hover {
+  color: var(--text-main);
+  background: rgba(92, 124, 250, 0.08); /* Clearer hover color on light theme */
+  transform: none;
+  box-shadow: none;
+}
+
+.nav-tab.active {
+  color: var(--accent-hover);
+  background: rgba(92, 124, 250, 0.15); /* New light accent color base */
+  box-shadow: inset 0 0 0 1px rgba(92, 124, 250, 0.3);
+}
+
+.nav-tab.active:hover {
+  background: rgba(92, 124, 250, 0.22);
+}
+
+/* Fade In Animation for Tabs */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+ul {
+  padding-left: 20px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+li {
+  margin-bottom: 6px;
+}
+.member-list {
+  list-style: none;
+  padding: 0;
+}
+.member-list li {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Secondary Button Support inside panels */
+.panel button {
+  width: auto;
 }
 
 .small {
-  font-size: 0.9rem;
-  color: #475569;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
+/* Status / Toast Notification */
 .status {
-  position: sticky;
-  bottom: 12px;
-  background: #0f172a;
-  color: #f8fafc;
-  border-radius: 10px;
-  padding: 12px;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: rgba(16, 185, 129, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+/* Dropdown specific */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+select option {
+  background: var(--bg-color);
+  color: var(--text-main);
 }
 
 @media (max-width: 850px) {
   .grid2 {
     grid-template-columns: 1fr;
   }
-
   .split-row {
     grid-template-columns: 1fr;
   }
