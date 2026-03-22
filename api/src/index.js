@@ -12,11 +12,14 @@ const {
   hashPassword,
   comparePassword,
   signToken,
-  authenticate
+  authenticate,
+  verifyToken
 } = require("./auth");
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
+const groupEventClients = new Map();
+const userEventClients = new Map();
 
 function parseCorsOrigins() {
   const raw = (process.env.CORS_ORIGIN || "*").trim();
@@ -51,6 +54,77 @@ function normalizeNickname(value) {
   }
 
   return trimmed.slice(0, 40);
+}
+
+function addGroupEventClient(groupId, res) {
+  const clients = groupEventClients.get(groupId) || new Set();
+  clients.add(res);
+  groupEventClients.set(groupId, clients);
+}
+
+function removeGroupEventClient(groupId, res) {
+  const clients = groupEventClients.get(groupId);
+  if (!clients) {
+    return;
+  }
+
+  clients.delete(res);
+  if (clients.size === 0) {
+    groupEventClients.delete(groupId);
+  }
+}
+
+function broadcastGroupEvent(groupId, event) {
+  const clients = groupEventClients.get(groupId);
+  if (!clients || clients.size === 0) {
+    return;
+  }
+
+  const payload = `data: ${JSON.stringify({
+    ...event,
+    group_id: groupId,
+    sent_at: new Date().toISOString()
+  })}\n\n`;
+
+  for (const client of clients) {
+    client.write(payload);
+  }
+}
+
+function addUserEventClient(userId, res) {
+  const clients = userEventClients.get(userId) || new Set();
+  clients.add(res);
+  userEventClients.set(userId, clients);
+}
+
+function removeUserEventClient(userId, res) {
+  const clients = userEventClients.get(userId);
+  if (!clients) {
+    return;
+  }
+
+  clients.delete(res);
+  if (clients.size === 0) {
+    userEventClients.delete(userId);
+  }
+}
+
+function broadcastUserEvent(userIds, event) {
+  const payload = `data: ${JSON.stringify({
+    ...event,
+    sent_at: new Date().toISOString()
+  })}\n\n`;
+
+  for (const userId of new Set(userIds)) {
+    const clients = userEventClients.get(userId);
+    if (!clients || clients.size === 0) {
+      continue;
+    }
+
+    for (const client of clients) {
+      client.write(payload);
+    }
+  }
 }
 
 async function ensureSchemaCompatibility() {
@@ -499,6 +573,46 @@ app.get("/me", authenticate, async (req, res) => {
   });
 });
 
+app.get("/events", async (req, res) => {
+  try {
+    const tokenFromQuery = typeof req.query.token === "string" ? req.query.token : "";
+    const authHeader = req.headers.authorization || "";
+    const [, tokenFromHeader] = authHeader.split(" ");
+    const authToken = tokenFromHeader || tokenFromQuery;
+
+    if (!authToken) {
+      return res.status(401).json({
+        ok: false,
+        error: "missing or invalid authorization header"
+      });
+    }
+
+    const user = verifyToken(authToken);
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    addUserEventClient(user.id, res);
+    res.write(`data: ${JSON.stringify({ type: "connected", scope: "user" })}\n\n`);
+
+    const keepAlive = setInterval(() => {
+      res.write(": keep-alive\n\n");
+    }, 25000);
+
+    req.on("close", () => {
+      clearInterval(keepAlive);
+      removeUserEventClient(user.id, res);
+    });
+  } catch (err) {
+    return res.status(401).json({
+      ok: false,
+      error: "invalid or expired token"
+    });
+  }
+});
+
 app.get("/groups", authenticate, async (req, res) => {
   try {
     const result = await pool.query(
@@ -557,6 +671,12 @@ app.post("/groups", authenticate, async (req, res) => {
 
       await db.query("COMMIT");
 
+      broadcastUserEvent([req.user.id], {
+        type: "groups_updated",
+        reason: "group_created",
+        group_id: group.id
+      });
+
       return res.status(201).json({
         ok: true,
         group
@@ -591,6 +711,7 @@ app.delete('/groups/:groupId', authenticate, async (req, res) => {
     const db = await pool.connect();
     try {
       await db.query('BEGIN');
+      const memberIds = await getGroupMemberIds(db, groupId);
       await db.query('DELETE FROM splits WHERE expense_id IN (SELECT id FROM expenses WHERE group_id = $1)', [groupId]);
       await db.query('DELETE FROM expenses WHERE group_id = $1', [groupId]);
       await db.query('DELETE FROM settlements WHERE group_id = $1', [groupId]);
@@ -598,6 +719,12 @@ app.delete('/groups/:groupId', authenticate, async (req, res) => {
       await db.query('DELETE FROM group_members WHERE group_id = $1', [groupId]);
       await db.query('DELETE FROM groups WHERE id = $1', [groupId]);
       await db.query('COMMIT');
+
+      broadcastUserEvent(memberIds, {
+        type: "groups_updated",
+        reason: "group_deleted",
+        group_id: groupId
+      });
 
       res.json({
         ok: true,
@@ -652,6 +779,55 @@ app.get("/groups/:groupId/members", authenticate, async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: err.message
+    });
+  }
+});
+
+app.get("/groups/:groupId/events", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const tokenFromQuery = typeof req.query.token === "string" ? req.query.token : "";
+    const authHeader = req.headers.authorization || "";
+    const [, tokenFromHeader] = authHeader.split(" ");
+    const authToken = tokenFromHeader || tokenFromQuery;
+
+    if (!authToken) {
+      return res.status(401).json({
+        ok: false,
+        error: "missing or invalid authorization header"
+      });
+    }
+
+    const user = verifyToken(authToken);
+    const member = await isGroupMember(groupId, user.id);
+
+    if (!member) {
+      return res.status(403).json({
+        ok: false,
+        error: "forbidden"
+      });
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    addGroupEventClient(groupId, res);
+    res.write(`data: ${JSON.stringify({ type: "connected", group_id: groupId })}\n\n`);
+
+    const keepAlive = setInterval(() => {
+      res.write(": keep-alive\n\n");
+    }, 25000);
+
+    req.on("close", () => {
+      clearInterval(keepAlive);
+      removeGroupEventClient(groupId, res);
+    });
+  } catch (err) {
+    return res.status(401).json({
+      ok: false,
+      error: "invalid or expired token"
     });
   }
 });
@@ -716,6 +892,16 @@ app.post("/groups/:groupId/members", authenticate, async (req, res) => {
       [groupId, targetUser.id]
     );
 
+    broadcastGroupEvent(groupId, {
+      type: "member_added",
+      user_id: targetUser.id
+    });
+    broadcastUserEvent([targetUser.id, req.user.id], {
+      type: "groups_updated",
+      reason: "member_added",
+      group_id: groupId
+    });
+
     return res.status(201).json({
       ok: true,
       member: memberResult.rows[0]
@@ -760,6 +946,11 @@ app.patch("/groups/:groupId/members/:userId", authenticate, async (req, res) => 
       });
     }
 
+    broadcastGroupEvent(groupId, {
+      type: "member_updated",
+      user_id: userId
+    });
+
     return res.json({
       ok: true,
       member: result.rows[0]
@@ -794,6 +985,16 @@ app.delete(
         `,
         [groupId, userId]
       );
+
+      broadcastGroupEvent(groupId, {
+        type: "member_removed",
+        user_id: userId
+      });
+      broadcastUserEvent([userId, req.user.id], {
+        type: "groups_updated",
+        reason: "member_removed",
+        group_id: groupId
+      });
 
       return res.json({
         ok: true
@@ -1008,6 +1209,10 @@ app.post("/groups/:groupId/expenses", authenticate, async (req, res) => {
       await db.query("COMMIT");
 
       await enqueueJobsSafely(notificationJobs);
+      broadcastGroupEvent(groupId, {
+        type: "expense_created",
+        expense_id: expense.id
+      });
 
       return res.status(201).json({
         ok: true,
@@ -1246,6 +1451,10 @@ app.post("/groups/:groupId/settlements", authenticate, async (req, res) => {
       await db.query("COMMIT");
 
       await enqueueJobsSafely(notificationJobs);
+      broadcastGroupEvent(groupId, {
+        type: "settlement_recorded",
+        settlement_id: settlement.id
+      });
 
       return res.status(201).json({
         ok: true,
@@ -1359,4 +1568,3 @@ async function startServer() {
 }
 
 startServer();
-

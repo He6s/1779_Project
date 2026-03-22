@@ -44,9 +44,18 @@ function authenticate(req, res, next) {
   }
 }
 
+function verifyToken(token) {
+  const decoded = jwt.verify(token, JWT_SECRET);
+  return {
+    id: decoded.sub,
+    email: decoded.email
+  };
+}
+
 module.exports = {
   hashPassword,
   comparePassword,
   signToken,
-  authenticate
+  authenticate,
+  verifyToken
 };

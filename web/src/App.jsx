@@ -51,6 +51,18 @@ function formatCents(value) {
   return `${Number(value)} cents`;
 }
 
+function buildEventStreamUrl(groupId, token) {
+  const base = DEFAULT_API_BASE.replace(/\/$/, "");
+  const params = new URLSearchParams({ token });
+  return `${base}/groups/${groupId}/events?${params.toString()}`;
+}
+
+function buildUserEventStreamUrl(token) {
+  const base = DEFAULT_API_BASE.replace(/\/$/, "");
+  const params = new URLSearchParams({ token });
+  return `${base}/events?${params.toString()}`;
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState("auth"); 
   const [status, setStatus] = useState("Ready");
@@ -195,51 +207,175 @@ function App() {
   }, [accountMenuOpen]);
 
   useEffect(() => {
-    if (selectedGroupId && token) {
-      const base = DEFAULT_API_BASE.replace(/\/$/, "");
-      fetch(`${base}/groups/${selectedGroupId}/members`, {
-        headers: { ...buildAuthHeaders(token) }
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.members) {
-          setMembers(data.members);
+    if (activeTab !== "groups" || !selectedGroupId || !token) {
+      return undefined;
+    }
+
+    run(async () => {
+      await loadMembersForGroup(selectedGroupId, false);
+    });
+  }, [activeTab, selectedGroupId, token]);
+
+  useEffect(() => {
+    if (activeTab !== "balances" || !selectedGroupId || !token) {
+      return undefined;
+    }
+
+    run(async () => {
+      await loadBalancesForGroup(selectedGroupId, false);
+    });
+  }, [activeTab, selectedGroupId, token]);
+
+  useEffect(() => {
+    if (activeTab !== "activity" || !selectedGroupId || !token) {
+      return undefined;
+    }
+
+    run(async () => {
+      await loadActivityForGroup(selectedGroupId, false);
+    });
+  }, [activeTab, selectedGroupId, token]);
+
+  useEffect(() => {
+    if (!selectedGroupId || !token) {
+      return undefined;
+    }
+
+    const eventSource = new EventSource(buildEventStreamUrl(selectedGroupId, token));
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (!payload || payload.type === "connected") {
+          return;
         }
-      })
-      .catch(err => console.error("Auto-load members failed:", err));
-    } else {
-      setMembers([]);
-    }
-  }, [selectedGroupId, token]);
+
+        if (
+          activeTab === "groups" &&
+          (payload.type === "member_added" || payload.type === "member_removed" || payload.type === "member_updated")
+        ) {
+          run(async () => {
+            await loadMembersForGroup(selectedGroupId, false);
+          });
+        }
+
+        if (
+          activeTab === "balances" &&
+          (
+            payload.type === "expense_created" ||
+            payload.type === "settlement_recorded" ||
+            payload.type === "member_added" ||
+            payload.type === "member_removed"
+          )
+        ) {
+          run(async () => {
+            await loadBalancesForGroup(selectedGroupId, false);
+          });
+        }
+
+        if (
+          activeTab === "activity" &&
+          (
+            payload.type === "expense_created" ||
+            payload.type === "settlement_recorded" ||
+            payload.type === "member_added" ||
+            payload.type === "member_removed" ||
+            payload.type === "member_updated"
+          )
+        ) {
+          run(async () => {
+            await loadActivityForGroup(selectedGroupId, false);
+          });
+        }
+      } catch (err) {
+        console.error("Failed to handle group event:", err);
+      }
+    };
+
+    eventSource.onerror = () => {
+      setStatus("Live updates disconnected. Reload if changes stop appearing.");
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [activeTab, selectedGroupId, token]);
 
   useEffect(() => {
-    if (selectedGroupId && token && activeTab === 'balances') {
-      const base = DEFAULT_API_BASE.replace(/\/$/, "");
-      fetch(`${base}/groups/${selectedGroupId}/balances`, {
-        headers: { ...buildAuthHeaders(token) }
-      })
-      .then(res => res.json())
-      .then(data => {
-        setBalances(data.balances || []);
-        setDebtGraph(data.debt_graph || []);
-      })
-      .catch(err => console.error("Auto-load balances failed:", err));
+    if (!token) {
+      return undefined;
     }
-  }, [selectedGroupId, token, activeTab]);
 
-  useEffect(() => {
-    if (selectedGroupId && token && activeTab === 'activity') {
-      const base = DEFAULT_API_BASE.replace(/\/$/, "");
-      fetch(`${base}/groups/${selectedGroupId}/activity?limit=20&offset=0`, {
-        headers: { ...buildAuthHeaders(token) }
-      })
-      .then(res => res.json())
-      .then(data => {
-        setActivity(data.activity || []);
-      })
-      .catch(err => console.error("Auto-load activity failed:", err));
+    const eventSource = new EventSource(buildUserEventStreamUrl(token));
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (!payload || payload.type === "connected") {
+          return;
+        }
+
+        if (payload.type === "groups_updated") {
+          run(async () => {
+            await refreshGroups();
+          });
+        }
+      } catch (err) {
+        console.error("Failed to handle user event:", err);
+      }
+    };
+
+    eventSource.onerror = () => {
+      setStatus("Group updates disconnected. Reload if new groups stop appearing.");
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [token]);
+
+  async function loadMembersForGroup(groupId, showStatus = true) {
+    if (!groupId) {
+      setStatus("Select a group first");
+      return;
     }
-  }, [selectedGroupId, token, activeTab]);
+
+    const data = await api(`/groups/${groupId}/members`);
+    setMembers(data.members || []);
+
+    if (showStatus) {
+      setStatus(`Members loaded: ${data.members?.length || 0}`);
+    }
+  }
+
+  async function loadBalancesForGroup(groupId, showStatus = true) {
+    if (!groupId) {
+      setStatus("Select a group first");
+      return;
+    }
+
+    const data = await api(`/groups/${groupId}/balances`);
+    setBalances(data.balances || []);
+    setDebtGraph(data.debt_graph || []);
+
+    if (showStatus) {
+      setStatus("Balances loaded");
+    }
+  }
+
+  async function loadActivityForGroup(groupId, showStatus = true) {
+    if (!groupId) {
+      setStatus("Select a group first");
+      return;
+    }
+
+    const data = await api(`/groups/${groupId}/activity?limit=20&offset=0`);
+    setActivity(data.activity || []);
+
+    if (showStatus) {
+      setStatus("Activity loaded");
+    }
+  }
 
   async function api(path, options = {}) {
     const base = DEFAULT_API_BASE.replace(/\/$/, "");
@@ -394,9 +530,7 @@ function App() {
     }
 
     await run(async () => {
-      const data = await api(`/groups/${selectedGroupId}/members`);
-      setMembers(data.members || []);
-      setStatus(`Members loaded: ${data.members?.length || 0}`);
+      await loadMembersForGroup(selectedGroupId);
     });
   }
 
@@ -481,20 +615,6 @@ function App() {
         ...toJsonBody(payload)
       });
       setStatus("Expense created successfully");
-      
-      // Auto-refresh balances and activity if the user switches to them
-      const base = DEFAULT_API_BASE.replace(/\/$/, "");
-      if (token) {
-        fetch(`${base}/groups/${selectedGroupId}/balances`, { headers: { ...buildAuthHeaders(token) } })
-          .then(res => res.json())
-          .then(d => { setBalances(d.balances || []); setDebtGraph(d.debt_graph || []); })
-          .catch(e => console.error("Update balances error:", e));
-
-        fetch(`${base}/groups/${selectedGroupId}/activity?limit=20&offset=0`, { headers: { ...buildAuthHeaders(token) } })
-          .then(res => res.json())
-          .then(d => setActivity(d.activity || []))
-          .catch(e => console.error("Update activity error:", e));
-      }
     });
   }
 
@@ -527,10 +647,7 @@ function App() {
     }
 
     await run(async () => {
-      const data = await api(`/groups/${selectedGroupId}/balances`);
-      setBalances(data.balances || []);
-      setDebtGraph(data.debt_graph || []);
-      setStatus("Balances loaded");
+      await loadBalancesForGroup(selectedGroupId);
     });
   }
 
@@ -564,20 +681,6 @@ function App() {
         })
       });
       setStatus("Settlement created successfully");
-
-      // Auto-refresh balances and activity updates immediately 
-      const base = DEFAULT_API_BASE.replace(/\/$/, "");
-      if (token) {
-        fetch(`${base}/groups/${selectedGroupId}/balances`, { headers: { ...buildAuthHeaders(token) } })
-          .then(res => res.json())
-          .then(d => { setBalances(d.balances || []); setDebtGraph(d.debt_graph || []); })
-          .catch(e => console.error("Update balances error:", e));
-
-        fetch(`${base}/groups/${selectedGroupId}/activity?limit=20&offset=0`, { headers: { ...buildAuthHeaders(token) } })
-          .then(res => res.json())
-          .then(d => setActivity(d.activity || []))
-          .catch(e => console.error("Update activity error:", e));
-      }
     });
   }
 
@@ -588,9 +691,7 @@ function App() {
     }
 
     await run(async () => {
-      const data = await api(`/groups/${selectedGroupId}/activity?limit=20&offset=0`);
-      setActivity(data.activity || []);
-      setStatus("Activity loaded");
+      await loadActivityForGroup(selectedGroupId);
     });
   }
 
