@@ -341,7 +341,7 @@ function App() {
       const data = await api(`/groups/${selectedGroupId}/expenses`, {
         ...toJsonBody(payload)
       });
-      setStatus(`Expense created: ${data.expense.id}`);
+      setStatus("Expense created successfully");
     });
   }
 
@@ -410,7 +410,7 @@ function App() {
           amount_cents: Number(settleAmount)
         })
       });
-      setStatus(`Settlement created: ${data.settlement.id}`);
+      setStatus("Settlement created successfully");
     });
   }
 
@@ -478,10 +478,9 @@ function App() {
               <label htmlFor="authPass">Password</label>
             </div>
           </div>
-          <div className="row">
+          <div className="row" style={{ gap: '16px' }}>
             <button onClick={onRegister}>Register</button>
             <button onClick={onLogin}>Login</button>
-            <button onClick={() => run(async () => refreshGroups())}>Refresh Groups</button>
           </div>
           <p className="small" style={{marginTop: '12px'}}>Current user: {currentUser ? currentUser.email : "none"}</p>
         </section>
