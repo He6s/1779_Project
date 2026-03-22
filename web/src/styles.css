@@ -62,10 +62,126 @@ body {
   padding: 32px;
   margin-bottom: 24px;
   box-shadow: var(--glass-shadow);
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+.hero-top {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  z-index: 2;
+}
+
+.hero p {
+  margin: 8px 0 0;
+}
+
+.account-entry {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.account-pill {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  color: var(--text-main);
+  box-shadow: 0 6px 18px rgba(52, 78, 160, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.22s ease;
+}
+
+.account-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(52, 78, 160, 0.18);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.account-pill.open {
+  border-color: rgba(120, 142, 255, 0.45);
+  box-shadow: 0 0 0 2px rgba(99, 122, 255, 0.15), 0 8px 20px rgba(52, 78, 160, 0.18);
+}
+
+.account-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(99, 122, 255, 0.88), rgba(128, 157, 255, 0.88));
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 9px rgba(99, 122, 255, 0.35);
+}
+
+.account-menu {
+  position: absolute;
+  right: -24px;
+  top: calc(100% + 12px);
+  width: 260px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 14px 30px rgba(46, 62, 120, 0.16);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 20;
+}
+
+.account-menu-user {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 10px;
+  padding: 0 2px;
+  word-break: break-all;
+}
+
+.logout-btn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
+  transform: none;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-dropdown-in {
+  animation: dropdownIn 0.2s ease forwards;
 }
 
 .hero::before {
@@ -450,6 +566,19 @@ select option {
 }
 
 @media (max-width: 850px) {
+  .hero-top {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .account-entry {
+    align-self: flex-end;
+  }
+
+  .account-menu {
+    right: -10px;
+  }
+
   .grid2 {
     grid-template-columns: 1fr;
   }

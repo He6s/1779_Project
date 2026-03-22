@@ -31,6 +31,12 @@ Latest update (2026-03-22):
 - Balances/Activity UX: added automatic fetching of balances and activity logs on tab navigation, removing the need for manual “Load” button clicks.
 - Expense/Settlement UX: auto-triggered data refresh immediately after creating new expenses and settlements.
 - Activity UX: improved activity log readability by mapping user UUIDs to human-readable names for `settlement_recorded` events.
+- Auth view hierarchy UX: unauthenticated users now only see the brand hero + Authentication card; Groups/Expense/Balances/Activity navigation and panels are hidden until login.
+- Account entry UX: moved user access to a global hero-level control (top-right inside the brand glass card) with a compact circular avatar trigger.
+- Account dropdown UX: opening the avatar reveals a minimal glassmorphism panel with only email + Log out action, with outside-click/Escape close behavior and subtle fade/slide motion.
+- Account overlay layout polish: fixed dropdown clipping inside the hero card and shifted menu alignment to the right to reduce overlap with the nav while staying inside the hero boundary (with mobile fallback offset).
+- Activity typography UX: added selective emphasis using bold fragments (payer/receiver/amount for settlement lines; action phrase + amount for expense lines) while keeping recorder identity unbolded.
+- Copy consistency: renamed balances section heading from `Net Balances` to `Group Balance` in the Balances tab.
 
 ## 2. Report-Ready Content by Required Sections
 

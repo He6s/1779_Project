@@ -54,6 +54,7 @@ function formatCents(value) {
 function App() {
   const [activeTab, setActiveTab] = useState("auth"); 
   const [status, setStatus] = useState("Ready");
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -87,6 +88,28 @@ function App() {
     () => groups.find((g) => g.id === selectedGroupId) || null,
     [groups, selectedGroupId]
   );
+
+  const isAuthenticated = useMemo(
+    () => Boolean(token && currentUser),
+    [token, currentUser]
+  );
+
+  const userName = useMemo(() => {
+    if (!currentUser?.email) {
+      return "User name";
+    }
+    const local = currentUser.email.split("@")[0] || "User";
+    return local;
+  }, [currentUser]);
+
+  const userInitial = useMemo(() => {
+    if (!userName) {
+      return "U";
+    }
+    return userName.charAt(0).toUpperCase();
+  }, [userName]);
+
+  const userEmail = useMemo(() => currentUser?.email || "", [currentUser]);
 
   const selectedParticipantIds = useMemo(
     () => members.filter((m) => participantEnabled[m.id]).map((m) => m.id),
@@ -138,6 +161,38 @@ function App() {
       setExpensePayer(currentUser.id);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setAccountMenuOpen(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) {
+      return undefined;
+    }
+
+    function handleOutsideClick(event) {
+      if (!event.target.closest(".account-entry")) {
+        setAccountMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setAccountMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [accountMenuOpen]);
 
   useEffect(() => {
     if (selectedGroupId && token) {
@@ -223,6 +278,7 @@ function App() {
       });
       setToken(data.token);
       setCurrentUser(data.user);
+      setActiveTab("groups");
       setStatus(`Registered: ${data.user.email}`);
       await refreshGroups(data.token);
     });
@@ -235,9 +291,27 @@ function App() {
       });
       setToken(data.token);
       setCurrentUser(data.user);
+      setActiveTab("groups");
       setStatus(`Logged in: ${data.user.email}`);
       await refreshGroups(data.token);
     });
+  }
+
+  function onLogout() {
+    setToken("");
+    setCurrentUser(null);
+    setGroups([]);
+    setSelectedGroupId("");
+    setMembers([]);
+    setBalances([]);
+    setDebtGraph([]);
+    setActivity([]);
+    setSettleFrom("");
+    setSettleTo("");
+    setExpensePayer("");
+    setAccountMenuOpen(false);
+    setActiveTab("auth");
+    setStatus("Logged out successfully");
   }
 
   async function refreshGroups(overrideToken) {
@@ -526,7 +600,14 @@ function App() {
     if (item.action_type === "expense_created") {
       const amount = formatCents(payload.amount_cents);
       const description = payload.description || "(no description)";
-      return `${item.user_email} created expense \"${description}\" (${amount})`;
+      return (
+        <>
+          <span>{item.user_email} </span>
+          <strong>created expense "{description}"</strong>
+          <span> </span>
+          <strong>({amount})</strong>
+        </>
+      );
     }
 
     if (item.action_type === "settlement_recorded") {
@@ -543,7 +624,16 @@ function App() {
         payerName = item.user_email;
       }
 
-      return `${item.user_email} recorded that ${payerName} paid ${amount} to ${targetName}`;
+      return (
+        <>
+          <span>{item.user_email} recorded that </span>
+          <strong>{payerName}</strong>
+          <span> paid </span>
+          <strong>{amount}</strong>
+          <span> to </span>
+          <strong>{targetName}</strong>
+        </>
+      );
     }
 
     return `${item.action_type} by ${item.user_email}`;
@@ -552,23 +642,38 @@ function App() {
   return (
     <div className="page">
       <header className="hero">
-        <h1>SettleUp</h1>
-        <p>A fast and transparent expense splitting loop.</p>
+        <div className="hero-top">
+          <div>
+            <h1>SettleUp</h1>
+            <p>A fast and transparent expense splitting loop.</p>
+          </div>
+
+          {isAuthenticated && (
+            <div className="account-entry">
+              <button
+                type="button"
+                className={`account-pill ${accountMenuOpen ? "open" : ""}`}
+                onClick={() => setAccountMenuOpen((prev) => !prev)}
+                aria-expanded={accountMenuOpen}
+                aria-label="Account menu"
+              >
+                <span className="account-avatar">{userInitial}</span>
+              </button>
+
+              {accountMenuOpen && (
+                <div className="account-menu animate-dropdown-in">
+                  <div className="account-menu-user">{userEmail}</div>
+                  <button type="button" className="logout-btn" onClick={onLogout}>
+                    Log out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
-      <nav className="nav-bar">
-        {['auth', 'groups', 'expense', 'balances', 'activity'].map(tab => (
-          <button 
-            key={tab}
-            className={`nav-tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </nav>
-
-      {activeTab === 'auth' && (
+      {!isAuthenticated && (
         <section className="panel animate-fade-in">
           <h2>Authentication</h2>
           <div className="grid2">
@@ -589,7 +694,21 @@ function App() {
         </section>
       )}
 
-      {activeTab === 'groups' && (
+      {isAuthenticated && (
+        <>
+          <nav className="nav-bar">
+            {["groups", "expense", "balances", "activity"].map((tab) => (
+              <button
+                key={tab}
+                className={`nav-tab ${activeTab === tab ? "active" : ""}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </nav>
+
+      {activeTab === "groups" && (
         <>
           <section className="panel animate-fade-in">
             <h2>Groups</h2>
@@ -656,7 +775,7 @@ function App() {
         </>
       )}
 
-      {activeTab === 'expense' && (
+      {activeTab === "expense" && (
         <section className="panel animate-fade-in">
           <h2>Expense</h2>
           <div className="grid2">
@@ -742,14 +861,14 @@ function App() {
         </section>
       )}
 
-      {activeTab === 'balances' && (
+      {activeTab === "balances" && (
         <section className="panel animate-fade-in">
           <h2>Balances & Settlements</h2>
           <div className="row">
             <button onClick={onLoadBalances}>Load Balances</button>
           </div>
 
-          <h3>Net Balances</h3>
+          <h3>Group Balance</h3>
           <ul>
             {balances.map((b) => (
               <li key={b.user_id}>
@@ -802,7 +921,7 @@ function App() {
         </section>
       )}
 
-      {activeTab === 'activity' && (
+      {activeTab === "activity" && (
         <section className="panel animate-fade-in">
           <h2>Activity</h2>
           <button onClick={onLoadActivity} style={{marginBottom: '24px'}}>Load Activity</button>
@@ -814,6 +933,9 @@ function App() {
             ))}
           </ul>
         </section>
+      )}
+
+        </>
       )}
 
       <footer className="status">{status}</footer>

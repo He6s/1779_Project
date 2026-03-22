@@ -103,7 +103,7 @@ try {
 }
 
 try {
-  $settleBody = @{to_user=$reg1.user.id; amount_cents=500} | ConvertTo-Json
+  $settleBody = @{from_user=$reg2.user.id; to_user=$reg1.user.id; amount_cents=500} | ConvertTo-Json
   $settle = Invoke-RestMethod -Uri "$base/groups/$gid/settlements" -Method Post -Headers @{Authorization="Bearer $t2"} -ContentType "application/json" -Body $settleBody
   Assert-Check ($settle.ok -eq $true) "create settlement from user2->user1"
 } catch {
