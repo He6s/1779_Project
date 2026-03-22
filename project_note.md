@@ -24,6 +24,14 @@ Latest update (2026-03-21):
 - UI/UX Overhaul: Fully redesigned the React frontend with a modern glassmorphism aesthetic, featuring floating input labels, custom animated checkboxes, tab-based navigation, and a fluid, animated pastel radial-gradient background.
 - Deployment Ops: Addressed `IfNotPresent` image caching in DOKS Kubernetes limits by explicitly bumping UI image tags (`v2-ui`, `v3-ui`, etc.) to force UI rollouts. Realigned doctl registry names (`mdgh-1779`).
 
+Latest update (2026-03-22):
+- Group navigation UX: prevented auto-selection of the first group on page load for a cleaner default state.
+- Member list UX: decoupled member list rendering so dynamic member cards appear only after a group is manually selected.
+- Group deletion API/UX: implemented cascade deletion for groups with manual confirmation, ensuring complete removal of related splits, expenses, settlements, and activity logs.
+- Balances/Activity UX: added automatic fetching of balances and activity logs on tab navigation, removing the need for manual “Load” button clicks.
+- Expense/Settlement UX: auto-triggered data refresh immediately after creating new expenses and settlements.
+- Activity UX: improved activity log readability by mapping user UUIDs to human-readable names for `settlement_recorded` events.
+
 ## 2. Report-Ready Content by Required Sections
 
 ### Team Information

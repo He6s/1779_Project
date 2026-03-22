@@ -1,15 +1,20 @@
 # SettleUp Final Report
 
 SettleUp is a cloud-native expense splitting platform for small groups. It supports group-based expense tracking, split validation, debt balancing, settlements, activity history, and asynchronous notifications, with containerized local development and Kubernetes deployment support.
+## Live URL
+Current deployment (valid as of this report):
+- Application URL: http://152.42.147.84:3000
+- API URL: http://152.42.147.82:3001
+
 
 ## 1. Team Information
 
 | Name | Student Number | Preferred Email |
 |---|---|---|
-| Hao-Chih Huang | 1006907037 | TODO |
-| George Cao | 1005556426 | TODO |
-| Lihao Xue | 1011809875 | TODO |
-| Zuhao Zhang | 1005828080 | TODO |
+| Hao-Chih Huang | 1006907037 | helioshuang2002@gmail.com |
+| George Cao | 1005556426 | yiweicaogeorge@gmail.com |
+| Lihao Xue | 1011809875 | xuelihaogpa4@gmail.com |
+| Zuhao Zhang | 1005828080 | davidzhangzuhao@gmail.com |
 
 ## 2. Motivation
 
@@ -334,13 +339,6 @@ Generic template (for other clusters/registries):
 ./scripts/validate_phase7_doks.ps1 -ApiBaseUrl "http://<api-external-ip>:3001" -WebUrl "http://<web-external-ip>:3000"
 ```
 
-### Live URL
-Current deployment (valid as of this report):
-- Application URL: http://152.42.147.84:3000
-- API URL: http://152.42.147.82:3001
-
-Note: these are environment-specific runtime endpoints, not fixed project constants.
-
 ## 9. AI Assistance and Verification (Summary)
 
 AI tools were used for architecture exploration, API/Kubernetes scaffolding, debugging assistance, and documentation drafting. The team reviewed outputs critically and corrected issues when needed.
@@ -362,18 +360,7 @@ How correctness was verified:
 
 Detailed interaction evidence is documented in `ai-session.md`.
 
-## 10. Individual Contributions
-
-Contribution details should be aligned with Git commit history before final submission.
-
-| Member | Key Contributions | Evidence (Commits/PRs) |
-|---|---|---|
-| Hao-Chih Huang | TODO | TODO |
-| George Cao | TODO | TODO |
-| Lihao Xue | TODO | TODO |
-| Zuhao Zhang | TODO | TODO |
-
-## 11. Lessons Learned and Concluding Remarks
+## 10. Lessons Learned and Concluding Remarks
 
 - Runtime validation is more reliable than superficial pass indicators.
 - Startup race conditions must be handled explicitly in distributed systems.
