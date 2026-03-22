@@ -139,6 +139,53 @@ function App() {
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    if (selectedGroupId && token) {
+      const base = DEFAULT_API_BASE.replace(/\/$/, "");
+      fetch(`${base}/groups/${selectedGroupId}/members`, {
+        headers: { ...buildAuthHeaders(token) }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.members) {
+          setMembers(data.members);
+        }
+      })
+      .catch(err => console.error("Auto-load members failed:", err));
+    } else {
+      setMembers([]);
+    }
+  }, [selectedGroupId, token]);
+
+  useEffect(() => {
+    if (selectedGroupId && token && activeTab === 'balances') {
+      const base = DEFAULT_API_BASE.replace(/\/$/, "");
+      fetch(`${base}/groups/${selectedGroupId}/balances`, {
+        headers: { ...buildAuthHeaders(token) }
+      })
+      .then(res => res.json())
+      .then(data => {
+        setBalances(data.balances || []);
+        setDebtGraph(data.debt_graph || []);
+      })
+      .catch(err => console.error("Auto-load balances failed:", err));
+    }
+  }, [selectedGroupId, token, activeTab]);
+
+  useEffect(() => {
+    if (selectedGroupId && token && activeTab === 'activity') {
+      const base = DEFAULT_API_BASE.replace(/\/$/, "");
+      fetch(`${base}/groups/${selectedGroupId}/activity?limit=20&offset=0`, {
+        headers: { ...buildAuthHeaders(token) }
+      })
+      .then(res => res.json())
+      .then(data => {
+        setActivity(data.activity || []);
+      })
+      .catch(err => console.error("Auto-load activity failed:", err));
+    }
+  }, [selectedGroupId, token, activeTab]);
+
   async function api(path, options = {}) {
     const base = DEFAULT_API_BASE.replace(/\/$/, "");
     const headers = {
@@ -206,9 +253,7 @@ function App() {
     }
 
     setGroups(data);
-    if (data.length > 0) {
-      setSelectedGroupId((prev) => prev || data[0].id);
-    }
+    // Auto-select removed to allow empty default state
   }
 
   async function onCreateGroup() {
@@ -218,6 +263,26 @@ function App() {
       });
       await refreshGroups();
       setStatus("Group created");
+    });
+  }
+
+  async function onDeleteGroup() {
+    if (!selectedGroup) return;
+    const confirmName = window.prompt(`Are you sure you want to delete this group?\nAll expenses, settlements, and activity will be permanently lost.\n\nType the group name "${selectedGroup.name}" to confirm:`);
+    
+    if (confirmName !== selectedGroup.name) {
+      if (confirmName !== null) setStatus("Group deletion cancelled: name did not match.");
+      return;
+    }
+
+    await run(async () => {
+      await api(`/groups/${selectedGroupId}`, {
+        method: "DELETE"
+      });
+      setStatus(`Group "${selectedGroup.name}" deleted successfully.`);
+      setSelectedGroupId("");
+      setMembers([]);
+      await refreshGroups();
     });
   }
 
@@ -342,6 +407,20 @@ function App() {
         ...toJsonBody(payload)
       });
       setStatus("Expense created successfully");
+      
+      // Auto-refresh balances and activity if the user switches to them
+      const base = DEFAULT_API_BASE.replace(/\/$/, "");
+      if (token) {
+        fetch(`${base}/groups/${selectedGroupId}/balances`, { headers: { ...buildAuthHeaders(token) } })
+          .then(res => res.json())
+          .then(d => { setBalances(d.balances || []); setDebtGraph(d.debt_graph || []); })
+          .catch(e => console.error("Update balances error:", e));
+
+        fetch(`${base}/groups/${selectedGroupId}/activity?limit=20&offset=0`, { headers: { ...buildAuthHeaders(token) } })
+          .then(res => res.json())
+          .then(d => setActivity(d.activity || []))
+          .catch(e => console.error("Update activity error:", e));
+      }
     });
   }
 
@@ -411,6 +490,20 @@ function App() {
         })
       });
       setStatus("Settlement created successfully");
+
+      // Auto-refresh balances and activity updates immediately 
+      const base = DEFAULT_API_BASE.replace(/\/$/, "");
+      if (token) {
+        fetch(`${base}/groups/${selectedGroupId}/balances`, { headers: { ...buildAuthHeaders(token) } })
+          .then(res => res.json())
+          .then(d => { setBalances(d.balances || []); setDebtGraph(d.debt_graph || []); })
+          .catch(e => console.error("Update balances error:", e));
+
+        fetch(`${base}/groups/${selectedGroupId}/activity?limit=20&offset=0`, { headers: { ...buildAuthHeaders(token) } })
+          .then(res => res.json())
+          .then(d => setActivity(d.activity || []))
+          .catch(e => console.error("Update activity error:", e));
+      }
     });
   }
 
@@ -440,7 +533,17 @@ function App() {
       const amount = formatCents(payload.amount_cents);
       const target = memberById[payload.to_user];
       const targetName = target ? getMemberLabel(target) : payload.to_user || "unknown";
-      return `${item.user_email} recorded settlement ${amount} to ${targetName}`;
+      
+      let payerName = "Someone";
+      if (payload.from_user) {
+        const payer = memberById[payload.from_user];
+        payerName = payer ? getMemberLabel(payer) : payload.from_user;
+      } else {
+        // Fallback for older records where from_user wasn't explicitly saved
+        payerName = item.user_email;
+      }
+
+      return `${item.user_email} recorded that ${payerName} paid ${amount} to ${targetName}`;
     }
 
     return `${item.action_type} by ${item.user_email}`;
@@ -487,53 +590,70 @@ function App() {
       )}
 
       {activeTab === 'groups' && (
-        <section className="panel animate-fade-in">
-          <h2>Groups & Members</h2>
-          <div className="grid2">
-            <div className="input-field">
-              <input id="groupName" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder=" " />
-              <label htmlFor="groupName">Group name</label>
+        <>
+          <section className="panel animate-fade-in">
+            <h2>Groups</h2>
+            <div className="grid2">
+              <div className="input-field">
+                <input id="groupName" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder=" " />
+                <label htmlFor="groupName">Group name</label>
+              </div>
+              <button onClick={onCreateGroup}>Create Group</button>
             </div>
-            <button onClick={onCreateGroup}>Create Group</button>
-          </div>
 
-          <div className="grid2">
-            <div className="input-field">
-              <select id="groupSelect" value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
-                <option value="">Select group</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
+            <div className="row" style={{marginTop: '16px', alignItems: 'center', marginBottom: 0}}>
+              <div className="input-field" style={{ flex: 1, margin: 0 }}>
+                <select id="groupSelect" value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
+                  <option value="">Select a group from the list...</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedGroupId && (
+                <button 
+                  onClick={onDeleteGroup}
+                  style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)', color: 'white', margin: 0, height: '48px' }}>
+                  Delete Group
+                </button>
+              )}
             </div>
-            <div className="input-field">
-              <input id="memberEmail" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder=" " />
-              <label htmlFor="memberEmail">Member email</label>
-            </div>
-          </div>
+          </section>
 
-          <div className="grid2">
-            <div className="input-field">
-              <input id="memberNickname" value={memberNickname} onChange={(e) => setMemberNickname(e.target.value)} placeholder=" " />
-              <label htmlFor="memberNickname">Member display name (optional, e.g. David)</label>
-            </div>
-          </div>
-          <div className="small" style={{marginBottom: '16px'}}>Tip: add nickname now so splits can be selected by name.</div>
+          {selectedGroupId && (
+            <section className="panel animate-fade-in">
+              <h2>Members of {selectedGroup?.name || 'Selected Group'}</h2>
+              <div className="grid2">
+                <div className="input-field">
+                  <input id="memberEmail" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder=" " />
+                  <label htmlFor="memberEmail">Member email</label>
+                </div>
+                <div className="input-field">
+                  <input id="memberNickname" value={memberNickname} onChange={(e) => setMemberNickname(e.target.value)} placeholder=" " />
+                  <label htmlFor="memberNickname">Member display name (optional)</label>
+                </div>
+              </div>
+              <div className="small" style={{marginBottom: '16px'}}>Tip: add nickname now so splits can be selected by name.</div>
 
-          <div className="row">
-            <button onClick={onAddMember}>Add Member</button>
-            <button onClick={onLoadMembers}>Load Members</button>
-          </div>
+              <div className="row">
+                <button onClick={onAddMember}>Add Member</button>
+                <button onClick={onLoadMembers}>Load Members</button>
+              </div>
 
-          <ul className="member-list">
-            {members.map((m) => (
-              <li key={m.id}>
-                {getMemberLabel(m)} ({m.email})
-              </li>
-            ))}
-          </ul>
-          {selectedGroup && <p className="small">Selected group: {selectedGroup.name}</p>}
-        </section>
+              {members.length > 0 ? (
+                <ul className="member-list">
+                  {members.map((m) => (
+                    <li key={m.id}>
+                      {getMemberLabel(m)} ({m.email})
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="small" style={{marginTop: '16px'}}>No members in this group yet. Add yourself and others below.</p>
+              )}
+            </section>
+          )}
+        </>
       )}
 
       {activeTab === 'expense' && (

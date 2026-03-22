@@ -575,6 +575,48 @@ app.post("/groups", authenticate, async (req, res) => {
   }
 });
 
+
+app.delete('/groups/:groupId', authenticate, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    const member = await isGroupMember(groupId, req.user.id);
+    if (!member) {
+      return res.status(403).json({
+        ok: false,
+        error: 'forbidden'
+      });
+    }
+
+    const db = await pool.connect();
+    try {
+      await db.query('BEGIN');
+      await db.query('DELETE FROM splits WHERE expense_id IN (SELECT id FROM expenses WHERE group_id = $1)', [groupId]);
+      await db.query('DELETE FROM expenses WHERE group_id = $1', [groupId]);
+      await db.query('DELETE FROM settlements WHERE group_id = $1', [groupId]);
+      await db.query('DELETE FROM activity_log WHERE group_id = $1', [groupId]);
+      await db.query('DELETE FROM group_members WHERE group_id = $1', [groupId]);
+      await db.query('DELETE FROM groups WHERE id = $1', [groupId]);
+      await db.query('COMMIT');
+
+      res.json({
+        ok: true,
+        deleted_group_id: groupId
+      });
+    } catch (err) {
+      await db.query('ROLLBACK');
+      throw err;
+    } finally {
+      db.release();
+    }
+  } catch (err) {
+    res.status(500).json({
+      ok: false,
+      error: err.message
+    });
+  }
+});
+
 app.get("/groups/:groupId/members", authenticate, async (req, res) => {
   try {
     const { groupId } = req.params;
@@ -1184,6 +1226,7 @@ app.post("/groups/:groupId/settlements", authenticate, async (req, res) => {
           "settlement_recorded",
           {
             settlement_id: settlement.id,
+            from_user: fromUser,
             to_user: toUser,
             amount_cents: amountCents
           }
@@ -1316,3 +1359,4 @@ async function startServer() {
 }
 
 startServer();
+
