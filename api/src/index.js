@@ -60,6 +60,13 @@ async function ensureSchemaCompatibility() {
     ADD COLUMN IF NOT EXISTS nickname TEXT
     `
   );
+
+  await pool.query(
+    `
+    ALTER TABLE groups
+    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP
+    `
+  );
 }
 
 async function isGroupMember(groupId, userId) {
@@ -503,7 +510,7 @@ app.get("/groups", authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT g.id, g.name, g.created_by, g.created_at
+      SELECT g.id, g.name, g.created_by, g.created_at, g.deleted_at
       FROM groups g
       JOIN group_members gm ON gm.group_id = g.id
       WHERE gm.user_id = $1
@@ -569,6 +576,46 @@ app.post("/groups", authenticate, async (req, res) => {
     }
   } catch (err) {
     res.status(500).json({
+      ok: false,
+      error: err.message
+    });
+  }
+});
+
+app.delete("/groups/:groupId", authenticate, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    const owner = await isGroupOwner(groupId, req.user.id);
+    if (!owner) {
+      return res.status(403).json({
+        ok: false,
+        error: "only group owner can delete groups"
+      });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE groups
+      SET deleted_at = COALESCE(deleted_at, CURRENT_TIMESTAMP)
+      WHERE id = $1
+      RETURNING id
+      `,
+      [groupId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: "group not found"
+      });
+    }
+
+    return res.json({
+      ok: true
+    });
+  } catch (err) {
+    return res.status(500).json({
       ok: false,
       error: err.message
     });

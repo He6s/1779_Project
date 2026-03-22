@@ -68,6 +68,15 @@ body {
   align-items: flex-start;
 }
 
+.hero-top {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  z-index: 1;
+}
+
 .hero::before {
   content: '';
   position: absolute;
@@ -94,6 +103,28 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
   z-index: 1;
+}
+
+.hero p {
+  z-index: 1;
+}
+
+.user-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 220px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
+}
+
+.user-pill strong {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 /* 3. Progressive Card-based Logic Design */
@@ -127,6 +158,18 @@ body {
   gap: 8px;
 }
 
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.panel-header p {
+  margin: 4px 0 0;
+}
+
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -139,6 +182,68 @@ body {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.groups-flow {
+  display: grid;
+  gap: 16px;
+}
+
+.groups-subtitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.group-list {
+  display: grid;
+  gap: 12px;
+}
+
+.group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  transition: var(--transition);
+}
+
+.group-row:hover {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+.group-row.is-selected {
+  background: rgba(99, 122, 255, 0.12);
+  border-color: rgba(99, 122, 255, 0.3);
+}
+
+.group-select {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-main);
+  box-shadow: none;
+}
+
+.group-select:hover {
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+}
+
+.group-name {
+  font-weight: 600;
+  font-size: 1rem;
 }
 
 /* 2. Selection panel / option area design */
@@ -404,7 +509,28 @@ li {
   border-radius: 8px;
   margin-bottom: 8px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.member-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.danger-btn {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  box-shadow: none;
+}
+
+.danger-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #b91c1c;
+  box-shadow: none;
 }
 
 /* Secondary Button Support inside panels */
@@ -450,6 +576,23 @@ select option {
 }
 
 @media (max-width: 850px) {
+  .hero-top,
+  .panel-header,
+  .group-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .user-pill {
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .member-list li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .grid2 {
     grid-template-columns: 1fr;
   }
