@@ -72,6 +72,7 @@ Implemented features:
 - User registration and login with password hashing and JWT authentication.
 - Group creation and membership management with authorization checks.
 - Expense creation with split-mode validation (equal, percentage, exact).
+- Expense activity and notification details include split type and per-member split amounts for clearer auditing.
 - Group balances and debt graph computation.
 - Settlement recording between members.
 - Activity logs for auditable actions.
@@ -141,6 +142,7 @@ Current verified status:
 - Local Kubernetes (kind) rollout and in-cluster API flow verified.
 - DOKS deployment completed and validated in runtime checks.
 - Real email delivery is enabled via SendGrid SMTP in cloud deployment.
+- SendGrid domain authentication is verified for `settleup-mail.ca`, and sender identity is set to `SettleUp <noreply@settleup-mail.ca>`.
 
 Live URL (current deployment at report time):
 - Application URL: `http://152.42.147.84:3000`

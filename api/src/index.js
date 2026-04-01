@@ -254,6 +254,66 @@ function buildExactSplits(amountCents, rawSplits) {
   return normalized;
 }
 
+async function getGroupMemberLabelById(db, groupId) {
+  const result = await db.query(
+    `
+    SELECT gm.user_id, gm.nickname, u.email
+    FROM group_members gm
+    JOIN users u ON u.id = gm.user_id
+    WHERE gm.group_id = $1
+    `,
+    [groupId]
+  );
+
+  const labelById = {};
+  for (const row of result.rows) {
+    const nickname = typeof row.nickname === "string" ? row.nickname.trim() : "";
+    labelById[row.user_id] = nickname || String(row.email || row.user_id).split("@")[0];
+  }
+
+  return labelById;
+}
+
+function buildExpenseSplitSummary({
+  splitType,
+  amountCents,
+  computedSplits,
+  rawSplits,
+  memberLabelById
+}) {
+  const rawPercentageByUserId = new Map(
+    (Array.isArray(rawSplits) ? rawSplits : []).map((item) => [
+      item.user_id,
+      Number(item.percentage)
+    ])
+  );
+
+  const breakdown = computedSplits
+    .map((split) => {
+      const percentage = rawPercentageByUserId.get(split.user_id);
+      return {
+        user_id: split.user_id,
+        label: memberLabelById[split.user_id] || split.user_id,
+        owed_cents: split.owed_cents,
+        percentage: Number.isFinite(percentage) ? percentage : null
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const splitParts = breakdown.map((entry) => {
+    if (splitType === "percentage" && Number.isFinite(entry.percentage)) {
+      return `${entry.label}: ${entry.percentage}% (${entry.owed_cents} cents)`;
+    }
+
+    return `${entry.label}: ${entry.owed_cents} cents`;
+  });
+
+  return {
+    breakdown,
+    text: `Total: ${amountCents} cents; Split type: ${splitType}; Splits: ${splitParts.join(", ")}`
+  };
+}
+
 function computeDebtEdges(balances) {
   const debtors = [];
   const creditors = [];
@@ -1173,6 +1233,15 @@ app.post("/groups/:groupId/expenses", authenticate, async (req, res) => {
         );
       }
 
+      const memberLabelById = await getGroupMemberLabelById(db, groupId);
+      const splitSummary = buildExpenseSplitSummary({
+        splitType,
+        amountCents,
+        computedSplits,
+        rawSplits: splits,
+        memberLabelById
+      });
+
       await db.query(
         `
         INSERT INTO activity_log (group_id, user_id, action_type, payload)
@@ -1187,7 +1256,9 @@ app.post("/groups/:groupId/expenses", authenticate, async (req, res) => {
             description,
             amount_cents: amountCents,
             currency,
-            split_type: splitType
+            split_type: splitType,
+            split_breakdown: splitSummary.breakdown,
+            split_details_text: splitSummary.text
           }
         ]
       );
@@ -1198,7 +1269,7 @@ app.post("/groups/:groupId/expenses", authenticate, async (req, res) => {
         eventType: "expense_created",
         amountCents,
         description,
-        extra: `Split type: ${splitType}`,
+        extra: splitSummary.text,
         recipientUserIds: null,
         includeActor: true,
         recipientOwedByUserId: Object.fromEntries(

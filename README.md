@@ -217,6 +217,7 @@ docker compose logs worker --tail=100
 kubectl logs deployment/worker -n settleup --tail=120
 ```
 - Expected log field: `delivered=true`.
+- Note for Gmail recipients: even when `delivered=true` at worker level, Gmail may still defer with `421 4.7.32` when the `From` header domain is not aligned with authenticated SPF/DKIM organizational domain. For stable inbox placement, use a SendGrid-authenticated custom domain as `EMAIL_FROM`.
 - If SMTP needs to be reconfigured, run:
 ```powershell
 ./scripts/enable_real_email.ps1 -SmtpHost "smtp.sendgrid.net" -SmtpPort 2525 -SmtpUser "apikey" -SmtpPass "<sendgrid-api-key>" -EmailFrom "<verified-sender-email>"
@@ -324,13 +325,37 @@ curl http://152.42.147.82:3001/ready
 - Local Kubernetes (kind) deployment verified, including rollout and in-cluster API flow.
 - DOKS deployment executed successfully on `ece1779-cluster`, with runtime verification passed.
 - Cloud deployments now use explicit unique tags for rollout safety (avoid relying on `latest`).
+- Deployment script reliability fixes are applied and re-verified:
+	- URL config no longer regresses to empty host (`http://`) during DOKS deploy.
+	- `-SkipBuildAndPush` now reuses deployed images (or accepts an explicit tag), preventing non-existent timestamp tags and `ImagePullBackOff`.
+- SendGrid domain authentication is verified for `settleup-mail.ca`.
+- Cloud sender identity is updated to `SettleUp <noreply@settleup-mail.ca>`.
 - Latest deployed feature bundle includes: member nickname/split UX improvements, expense payer selection, duplicate-member guard in add-member flow, settlement from/to selection with owes-who display, and richer activity detail rendering.
 
 ### DOKS deployment commands
+Important: include SMTP credentials during deploy if you want real email delivery.
+- `scripts/deploy_doks.ps1` reads SMTP values from environment variables.
+- If `SMTP_USER` or `SMTP_PASS` is missing, cloud secret values can be overwritten with empty strings and email notifications will stop working.
+
+Recommended pre-deploy env setup:
+```powershell
+$env:EMAIL_ENABLED = "true"
+$env:SMTP_HOST = "smtp.sendgrid.net"
+$env:SMTP_PORT = "2525"
+$env:SMTP_USER = "apikey"
+$env:SMTP_PASS = "<sendgrid-api-key>"
+$env:EMAIL_FROM = "<verified-sender-email>"
+```
+
 Using this team's verified values:
 ```powershell
 ./scripts/deploy_doks.ps1 -ClusterName "ece1779-cluster" -Registry "registry.digitalocean.com/mdgh-1779"
 ./scripts/validate_phase7_doks.ps1 -ApiBaseUrl "http://152.42.147.82:3001" -WebUrl "http://152.42.147.84:3000"
+```
+
+If SMTP values were accidentally cleared by a deploy, re-apply them with:
+```powershell
+./scripts/enable_real_email.ps1 -SmtpHost "smtp.sendgrid.net" -SmtpPort 2525 -SmtpUser "apikey" -SmtpPass "<sendgrid-api-key>" -EmailFrom "<verified-sender-email>"
 ```
 
 Generic template (for other clusters/registries):

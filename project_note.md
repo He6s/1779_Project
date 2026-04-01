@@ -1,6 +1,6 @@
 # Project Notes for Final Report (Working Draft)
 
-Last updated: 2026-03-21
+Last updated: 2026-04-01
 Purpose: Capture report-ready facts from implementation and validation so the final README report can be written quickly and accurately.
 
 Template file for final report drafting:
@@ -37,6 +37,17 @@ Latest update (2026-03-22):
 - Account overlay layout polish: fixed dropdown clipping inside the hero card and shifted menu alignment to the right to reduce overlap with the nav while staying inside the hero boundary (with mobile fallback offset).
 - Activity typography UX: added selective emphasis using bold fragments (payer/receiver/amount for settlement lines; action phrase + amount for expense lines) while keeping recorder identity unbolded.
 - Copy consistency: renamed balances section heading from `Net Balances` to `Group Balance` in the Balances tab.
+
+Latest update (2026-04-01):
+- Activity/Email detail parity: for `expense_created`, backend now stores and sends richer split summary data (split type + per-member owed cents, and percentage when applicable), and frontend renders these details in Activity.
+- Activity formatting refinement: removed duplicate `Total` text in Activity detail area (total is already shown in the existing expense amount), while keeping split type and per-member amounts emphasized.
+- Cloud deployment fix (root cause identified): occasional "API seems stuck" incidents were traced to deployment script behavior, not API runtime deadlock.
+- DOKS script hardening: fixed `scripts/deploy_doks.ps1` so URL values are no longer overwritten to `http://` and `-SkipBuildAndPush` reuses deployed images instead of generating non-existent timestamp tags (prevents `ImagePullBackOff`).
+- Deployment validation: both full deploy and skip-build deploy were re-verified; `APP_BASE_URL`, `API_BASE_URL`, and `CORS_ORIGIN` remained correct after script execution.
+- SendGrid delivery finding: app-to-SendGrid handoff is successful (`delivered=true` in worker logs), but Gmail still shows `421 4.7.32` deferred/rate-limited behavior when using a `gmail.com` From address via SendGrid due to SPF/DKIM organizational-domain alignment.
+- Deliverability recommendation: for stable inbox placement, migrate From address to a SendGrid-authenticated custom domain (domain authentication), not only plan upgrade.
+- Domain migration completed: `settleup-mail.ca` is verified in SendGrid Domain Authentication.
+- Sender identity switched in runtime config to `SettleUp <noreply@settleup-mail.ca>` via `scripts/enable_real_email.ps1` (no image redeploy required).
 
 ## 2. Report-Ready Content by Required Sections
 
@@ -188,7 +199,7 @@ Important report rule reminder:
 ## 5. Remaining Gaps Before Final Submission
 
 - DOKS deployment and phase-7 runtime validation are completed; report evidence packaging remains.
-- Real SMTP delivery is enabled and validated (worker logs and provider delivery status).
+- Real SMTP delivery is enabled and validated at provider handoff level (worker logs + SendGrid message events), but Gmail inbox placement remains unstable under `gmail.com` From due to DMARC alignment constraints.
 - Add cloud monitoring dashboards/alerts evidence.
 - Produce ai-session.md with concise, high-value examples and one clear AI limitation case.
 - Finalize contribution mapping per member using git history.

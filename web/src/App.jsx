@@ -701,12 +701,49 @@ function App() {
     if (item.action_type === "expense_created") {
       const amount = formatCents(payload.amount_cents);
       const description = payload.description || "(no description)";
+      const splitType = payload.split_type || "equal";
+      const splitBreakdown = Array.isArray(payload.split_breakdown)
+        ? payload.split_breakdown
+        : [];
+
+      const fallbackSplitDetails =
+        !splitBreakdown.length && typeof payload.split_details_text === "string"
+          ? payload.split_details_text.replace(/^\s*Total:[^;]*;\s*/i, "")
+          : "";
+
       return (
         <>
           <span>{item.user_email} </span>
           <strong>created expense "{description}"</strong>
           <span> </span>
           <strong>({amount})</strong>
+          {splitBreakdown.length ? (
+            <>
+              <span> Split type: </span>
+              <strong>{splitType}</strong>
+              <span>; Splits: </span>
+              {splitBreakdown.map((entry, index) => {
+                const label = entry?.label || entry?.user_id || "unknown";
+                const owedCents = Number(entry?.owed_cents);
+                const hasPercentage =
+                  splitType === "percentage" &&
+                  Number.isFinite(Number(entry?.percentage));
+
+                return (
+                  <span key={`${label}-${index}`}>
+                    {index > 0 ? ", " : ""}
+                    {label}: <strong>{Number.isFinite(owedCents) ? `${owedCents} cents` : String(entry?.owed_cents)}</strong>
+                    {hasPercentage ? ` (${Number(entry.percentage)}%)` : ""}
+                  </span>
+                );
+              })}
+            </>
+          ) : fallbackSplitDetails ? (
+            <>
+              <span> </span>
+              <span>{fallbackSplitDetails}</span>
+            </>
+          ) : null}
         </>
       );
     }

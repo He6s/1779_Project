@@ -93,20 +93,39 @@ if ([string]::IsNullOrWhiteSpace($env:EMAIL_ENABLED)) {
   $env:EMAIL_ENABLED = "false"
 }
 
-$apiImage = "$Registry/settleup-api:$Tag"
-$webImage = "$Registry/settleup-web:$Tag"
+$apiImage = ""
+$webImage = ""
 $registryName = ($Registry -split "/")[-1]
 $registrySecretName = "registry-$registryName"
 
 Write-Output "== Build and Push Images =="
 if (-not $SkipBuildAndPush) {
+  $apiImage = "$Registry/settleup-api:$Tag"
+  $webImage = "$Registry/settleup-web:$Tag"
+
   docker build -t $apiImage ./api
   docker build -t $webImage ./web
 
   docker push $apiImage
   docker push $webImage
 } else {
-  Write-Output "SkipBuildAndPush enabled, reusing existing image tags."
+  if ($PSBoundParameters.ContainsKey("Tag")) {
+    $apiImage = "$Registry/settleup-api:$Tag"
+    $webImage = "$Registry/settleup-web:$Tag"
+    Write-Output "SkipBuildAndPush enabled, using provided tag: $Tag"
+  } else {
+    # Reuse currently deployed images to avoid pushing non-existent timestamp tags.
+    $apiImage = kubectl get deployment api -n $Namespace -o jsonpath='{.spec.template.spec.containers[0].image}'
+    $webImage = kubectl get deployment web -n $Namespace -o jsonpath='{.spec.template.spec.containers[0].image}'
+
+    if ([string]::IsNullOrWhiteSpace($apiImage) -or [string]::IsNullOrWhiteSpace($webImage)) {
+      throw "SkipBuildAndPush requires deployed images to exist, or provide -Tag explicitly."
+    }
+
+    Write-Output "SkipBuildAndPush enabled, reusing currently deployed images."
+    Write-Output "api image: $apiImage"
+    Write-Output "web image: $webImage"
+  }
 }
 
 Write-Output "== Configure Kubernetes Context =="
@@ -170,9 +189,9 @@ $webHost = Wait-For-LB-IP -ServiceName "web" -Namespace $Namespace
 $apiHost = Wait-For-LB-IP -ServiceName "api" -Namespace $Namespace
 
 if (-not [string]::IsNullOrWhiteSpace($webHost)) {
-  $webUrl = "http://$webHost:3000"
+  $webUrl = "http://{0}:3000" -f $webHost
   $configMapObj = kubectl get configmap settleup-app-config -n $Namespace -o json | ConvertFrom-Json
-  $apiUrl = if (-not [string]::IsNullOrWhiteSpace($apiHost)) { "http://$apiHost:3001" } else { $configMapObj.data.API_BASE_URL }
+  $apiUrl = if (-not [string]::IsNullOrWhiteSpace($apiHost)) { "http://{0}:3001" -f $apiHost } else { $configMapObj.data.API_BASE_URL }
   $configMapObj.data.APP_BASE_URL = $webUrl
   $configMapObj.data.CORS_ORIGIN = $webUrl
   if (-not [string]::IsNullOrWhiteSpace($apiUrl)) {
@@ -189,13 +208,13 @@ Write-Output "== Service Status =="
 kubectl get svc -n $Namespace
 
 if (-not [string]::IsNullOrWhiteSpace($webHost)) {
-  Write-Output "WEB_URL=http://$webHost:3000"
+  Write-Output ("WEB_URL=http://{0}:3000" -f $webHost)
 } else {
   Write-Output "WEB_URL=<pending external IP>"
 }
 
 if (-not [string]::IsNullOrWhiteSpace($apiHost)) {
-  Write-Output "API_URL=http://$apiHost:3001"
+  Write-Output ("API_URL=http://{0}:3001" -f $apiHost)
 } else {
   Write-Output "API_URL=<pending external IP>"
 }
