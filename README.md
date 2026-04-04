@@ -385,7 +385,22 @@ How correctness was verified:
 
 Detailed interaction evidence is documented in `ai-session.md`.
 
-## 10. Lessons Learned and Concluding Remarks
+## 10. Individual Contributions
+Hao-Chih Huang
+- Set up the base project repository and local development environment, including the folder structure, environment files, and shared team setup.
+- Built the multi container local stack with Docker Compose, integrating the web, API, PostgreSQL, and Redis services.
+- Designed and implemented the initial database schema for core entities such as users, groups, expenses, splits, settlements, and activity logs.
+- Added backend foundation routes and service connectivity, including health and readiness endpoints, PostgreSQL integration, and Redis integration.
+- Implemented the initial user and group API foundation, including basic create and list routes for early backend testing and team integration.
+  
+Yiwei Cao
+
+Lihao Xue
+
+Zhuhao Zhang
+
+
+## 11. Lessons Learned and Concluding Remarks
 
 - Runtime validation is more reliable than superficial pass indicators.
 - Startup race conditions must be handled explicitly in distributed systems.
