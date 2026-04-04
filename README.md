@@ -1,4 +1,4 @@
-# SettleUp Final Report
+# SettleUp – A Cloud-Native Expense Splitting Platform 
 
 SettleUp is a cloud-native expense splitting platform for small groups. It supports group-based expense tracking, split validation, debt balancing, settlements, activity history, and asynchronous notifications, with containerized local development and Kubernetes deployment support.
 ## Live URL
@@ -350,14 +350,6 @@ kubectl rollout status deployment/worker -n settleup --timeout=300s
 kubectl rollout status deployment/web -n settleup --timeout=300s
 ```
 
-### Suggested report screenshots
-- Auth success view.
-- Group/member management.
-- Expense creation result.
-- Balance before/after settlement.
-- Activity log.
-- `/metrics` output sample.
-
 ## 7. Development Guide
 
 ### Prerequisites
@@ -537,3 +529,6 @@ The project was integrated collaboratively. The breakdown below highlights each 
   - Incremental milestone delivery with repeated verification reduces integration risk.
 
 SettleUp now has a complete backend workflow, React frontend, asynchronous worker pipeline, observability, and reproducible local/cluster deployment path, with successful DOKS deployment and cloud runtime validation. The remaining finalization work is SMTP production proof, cloud monitoring evidence packaging, and contribution table polishing.
+
+## 12. Video Demo
+https://youtu.be/fWsSCcICwHk

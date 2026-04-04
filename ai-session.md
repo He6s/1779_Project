@@ -1,131 +1,66 @@
-# AI Interaction Record (ai-session.md)
+## Session Title
+Kubernetes Verification: Moving from Render Checks to Real Runtime Validation
 
-This file summarizes how AI tools were used during development, where they helped, where they were limited, and how outputs were verified.
+### Prompt (we sent to AI)
 
-## 1. Scope of AI Usage
+```text
+How should we validate our Kubernetes milestone in a repeatable way?
+```
 
-AI support was used for:
-- Architecture and API workflow scaffolding.
-- Kubernetes and deployment artifact drafting.
-- Validation script drafting and iterative improvements.
-- Debugging assistance and documentation organization.
+### AI Response (trimmed)
 
-## 2. Where AI Contributed Meaningfully
+```text
+Suggested approach:
+- Run `kubectl kustomize k8s` or `kubectl apply -k k8s --dry-run=client`
+- Confirm that rendered output includes Deployment, Service, Ingress, HPA, and PVC objects
+- Check that required environment variables and probes are present
+- Optionally add a simple script to automate these manifest checks
+```
 
-### 2.1 Backend and business workflow acceleration
-- Helped scaffold authentication, group/member, expense, balance, settlement, and activity APIs.
-- Reduced repetitive setup effort and sped up early integration.
+### What Your Team Did With It
 
-### 2.2 Deployment asset generation
-- Helped generate Kubernetes manifests and environment templates.
-- Helped draft deployment scripts for cloud rollout and runtime checks.
+- Useful:
+  - The suggestion helped us quickly create a first-pass validation script for Kubernetes artifacts and confirmed that required objects existed in rendered output.
+- Incorrect, misleading, or not sufficient:
+  - This was not enough to prove that the system actually worked. Manifest rendering does not verify pod readiness, service connectivity, worker behavior, or end-to-end application flow.
+- How we verified, modified, or replaced it:
+  - We kept the render-level checks, but treated them only as an initial gate.
+  - We then upgraded our verification approach by deploying to a real `kind` cluster, checking rollout for `db`, `redis`, `api`, `web`, and `worker`, and running actual runtime acceptance checks.
+  - This correction is reflected in our project scripts and notes, especially `scripts/validate_phase6_k8s.ps1`, `scripts/validate_phase1_2.ps1`, and `project_note.md`.
 
-### 2.3 Validation support
-- Helped draft phase-based validation scripts.
-- Encouraged script-based verification for repeatability.
+---
 
-## 3. Representative Limitation or Mistake
+## Session Title
+Expense Workflow and Real-Time UX Improvements
 
-### Issue
-Early Kubernetes verification focused on render-level checks (manifest rendering) rather than real runtime behavior.
+### Prompt (we sent to AI)
 
-### Why this was insufficient
-Rendered manifests do not prove pod readiness, service connectivity, or end-to-end functionality.
+```text
+How should we improve expense entry, member selection, and live updates in our Node/React app?
+```
 
-### Correction taken by team
-- Ran real cluster deployment on kind.
-- Verified rollout status for db/redis/api/web/worker.
-- Ran API end-to-end script against in-cluster endpoint.
-- Inspected worker logs to confirm queue processing.
+### AI Response (trimmed)
 
-## 4. Critical Evaluation Approach
+```text
+Recommended direction:
+- Add an explicit `payer_id` field for expense creation and validate it on the backend
+- Replace raw ID input in the UI with member-based dropdowns or selectors
+- Use either polling or Server-Sent Events for lightweight live updates
+- Update settlement forms to clearly distinguish payer and receiver
+- Re-test balances and activity flows after UX changes
+```
 
-The team did not treat AI output as automatically correct. Instead, AI-generated changes were:
-- Reviewed for consistency with proposal requirements.
-- Tested with scripts and runtime checks.
-- Corrected when mismatch or logical errors were found.
+### What Your Team Did With It
 
-## 5. Verification Methods Used
+- Useful:
+  - The AI suggestion aligned well with our actual product goals and helped structure the next round of workflow improvements.
+  - It highlighted that UX changes in financial flows should be paired with backend validation, not just frontend changes.
+- Incorrect, misleading, or not applicable:
+  - Some options, such as generic polling, were not the best fit for our project once we considered responsiveness and simplicity.
+  - The AI did not know our exact schema and therefore could not supply a drop-in final implementation.
+- How we verified, modified, or replaced it:
+  - We implemented explicit payer support through `payer_id`, improved settlement handling with `from_user` and `to_user`, and added frontend member-based selection instead of raw IDs.
+  - For live updates, we chose Server-Sent Events rather than polling and connected them to group/user update flows in the React frontend.
+  - We verified the final behavior through manual UI testing, balance/settlement checks, and phase-based validation scripts.
+  - The resulting implementation appears in `api/src/index.js`, `web/src/App.jsx`, and is summarized in `project_note.md`.
 
-- Automated API flow validation (`scripts/validate_phase1_2.ps1`).
-- Observability validation (`scripts/validate_phase5_observability.ps1`).
-- Kubernetes render and rollout checks (`scripts/validate_phase6_k8s.ps1` + runtime checks).
-- Manual checks for web/API behavior.
-- Worker log inspection for async processing outcomes.
-
-## 6. Notable Fixes Found Through Verification
-
-- Settlement net-balance formula/sign bug was identified and fixed.
-- Worker Redis startup race condition was identified and mitigated.
-- CORS configurability was added for cloud web-to-api access.
-- Frontend migrated from temporary demo page to React for final deliverable alignment.
-- DOKS rollout issues were debugged and fixed across script patching, registry image pulls, DB PGDATA pathing, and resource right-sizing.
-- Expense UX improved to support member nicknames and name-based split selection for percentage/exact modes.
-- Expense flow updated to support explicit payer selection (`payer_id`) with backend validation that payer belongs to the group.
-- Settlement UI improved to select target member by name instead of raw user id.
-- Settlement flow updated to collect both payer (`from_user`) and receiver (`to_user`), plus same-user validation.
-- Group member add flow now checks for duplicate existing users before submission.
-- Activity rendering improved to show expense description and amount from activity payload.
-
-## 6.2 Deployment operation lesson (build/push before set-image)
-
-Issue observed:
-- Deployment images were updated to a new tag before confirming Docker build/push success.
-- Result: pods entered `ImagePullBackOff` because the target image tag did not exist in registry.
-
-Correction taken:
-- Recovered by rolling back to known-good running images.
-- Switched to guarded release order: daemon check -> build -> push -> `kubectl set image` -> rollout status.
-- Adopted unique image tags per release to avoid ambiguity and stale-cache behavior.
-
-Outcome:
-- Cluster rollout recovered and completed successfully.
-- New member-selection UX changes were deployed to cloud runtime.
-
-## 6.3 Standard release operation sequence adopted
-
-After this iteration, the team standardized release operations as follows:
-- Local build validation first.
-- Docker daemon readiness check.
-- Build and push unique-tag API/Web images.
-- Update Kubernetes deployment images only after push success.
-- Wait for rollout success for `api`, `worker`, and `web`.
-- Perform worker log and API health/readiness smoke checks.
-- Sync README/project_note/ai-session documentation in the same change window.
-
-Why this matters:
-- Prevents broken rollouts from nonexistent image tags.
-- Improves reproducibility and auditability of AI-assisted changes.
-
-## 6.1 DOKS debugging case (meaningful AI-assisted iteration)
-
-Issue cluster observed in cloud deployment:
-- PowerShell patch payload parsing errors.
-- ImagePullBackOff (401) on DigitalOcean registry images.
-- PostgreSQL CrashLoop due to volume root `lost+found` behavior.
-- Rollout stalls under single-node memory pressure.
-
-Corrections implemented:
-- Reworked script patch operations to avoid fragile escaped JSON payloads.
-- Added DOKS overlay patch to enforce imagePullSecrets in deployment templates.
-- Set `PGDATA` to a subdirectory under mounted volume and used safer DB rollout strategy.
-- Reduced resource requests/limits and used phased rollout order to fit node capacity.
-
-Verification outcome:
-- Core cloud workloads reached running state.
-- Public API/Web endpoints were observed.
-- Phase-7 acceptance validation passed in cloud runtime checks.
-- Real email delivery was validated with `delivered=true` worker logs and provider delivery events.
-- Remaining work is report evidence packaging and contribution-table completion.
-
-## 7. Current Status and Remaining Work
-
-Completed:
-- Core functionality implemented and validated locally.
-- Local Kubernetes runtime validation completed.
-- Final-report-ready documentation structure prepared.
-
-Pending:
-- Report integration of cloud evidence and screenshot packaging.
-- Final cloud monitoring/alert evidence capture.
-- Contribution table finalization from commit history.
